@@ -30,6 +30,7 @@ Each record contains:
 | ADR-0015 | Single-use hashed email verification and password reset tokens | Accepted |
 | ADR-0016 | Environment bootstrapped SUPER_ADMIN with forced password rotation | Accepted |
 | ADR-0017 | Archive lifecycle and public visibility boundary | Accepted |
+| ADR-0018 | Server-bound signed Cloudinary uploads and trusted verification | Accepted |
 
 ---
 
@@ -508,3 +509,33 @@ Events and albums are editorial records. Administrators need to prepare unpublis
 - Every public photo query must preserve the shared visibility predicate.
 - Categories are deactivated rather than deleted; academic years can only be deleted when foreign-key dependencies permit it.
 - Upload and moderation state transitions remain Phase 04/05 responsibilities.
+
+---
+
+## ADR-0018 — Server-bound signed Cloudinary uploads and trusted verification
+
+**Status:** Accepted
+
+### Context
+
+Image bytes should not transit the API, but a browser-controlled Cloudinary response cannot be trusted to create a photo record. The API must constrain uploads before they occur and verify the resulting asset afterward.
+
+### Decision
+
+- Use short-lived server-created upload authorizations bound to the authenticated user and a submission.
+- Generate the Cloudinary public ID on the server under the configured archive folder.
+- Sign only the required upload parameters with the Cloudinary API secret; return the API key but never the secret.
+- Allow only image uploads with JPEG, PNG, or WebP format and enforce a 15 MB server-side limit after verification.
+- Verify public ID, asset ID, resource type, delivery type, format, dimensions, byte size, and creation time through the Cloudinary Admin API.
+- Persist a pending photo only after verification succeeds, then mark the authorization used in the same transaction.
+- Require at least one explicit photographer credit and never infer it from the uploader.
+- Delete expired unused authorized assets through a scheduled best-effort cleanup job.
+- Keep the provider behind `CloudinaryAssetVerifier`; tests use an in-memory adapter.
+
+### Consequences
+
+- API servers do not handle image bytes and can scale independently from upload bandwidth.
+- A malicious client cannot turn an arbitrary Cloudinary asset into a photo row.
+- Cloudinary credentials and delivery semantics are isolated to one provider adapter.
+- Cleanup is best effort and must be monitored for provider outages.
+- Cloudinary production credentials and restricted upload presets are deployment requirements.

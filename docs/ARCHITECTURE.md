@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 00 establishes the repository, local infrastructure, backend, frontend, and verification pipelines. Phase 01 adds the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication and authorization. Phase 03 adds archive management for academic years, categories, events, and albums, plus public read APIs with the approved-content visibility boundary. Uploads and moderation workflows are implemented in later phases.
+Phase 00 establishes the repository, local infrastructure, backend, frontend, and verification pipelines. Phase 01 adds the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication and authorization. Phase 03 adds archive management and public read APIs. Phase 04 adds signed Cloudinary uploads, server-side asset verification, submission tracking, photographer credits, and expired-upload cleanup. Moderation workflows are implemented in later phases.
 
 ## 2. Architectural style
 
@@ -114,6 +114,8 @@ Key rules:
 - Abandoned uploads expire and are cleaned up.
 - Original images are exposed only where permitted.
 - EXIF location data is not published.
+
+Phase 04 uses a `CloudinaryAssetVerifier` port. Production calls the Cloudinary Admin API with server-side credentials; the test profile uses an in-memory verifier. The API never accepts client-provided dimensions, bytes, format, asset ID, or delivery type as authoritative.
 
 ## 8. Moderation architecture
 

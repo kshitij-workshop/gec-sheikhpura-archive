@@ -181,7 +181,7 @@ Rules:
 
 ## 9. Archive management and public endpoints
 
-Phase 03 implements the archive endpoints below. Remaining contribution, upload, moderation, report, and suggestion endpoints are planned for later phases.
+Phase 03 and Phase 04 implement the archive and upload endpoints below. Moderation, report, and suggestion endpoints are planned for later phases.
 
 ### Public (implemented)
 
@@ -200,16 +200,26 @@ Phase 03 implements the archive endpoints below. Remaining contribution, upload,
 
 `GET /events` accepts `page`, `size`, and optional case-insensitive `query` title filtering. `GET /albums/{id}` accepts `page` and `size` for approved photo pagination. `GET /photos/{id}` returns a photo only when it satisfies the complete event/album/photo publication predicate. Public album photo results apply the same predicate.
 
-### User (Phase 04–05)
+### Upload flow
+
+1. `POST /me/submissions` creates a pending submission owned by the authenticated user.
+2. `POST /me/uploads/authorize` returns a short-lived signature, server-generated `publicId`, upload URL, Cloudinary API key, preset, expiry, 15 MB limit, and allowed formats.
+3. The client uploads bytes directly to Cloudinary; bytes never pass through the API.
+4. `POST /me/submissions/{id}/photos` accepts the authorization ID, returned public ID, display metadata, and at least one photographer credit. The server verifies the asset through Cloudinary before persisting a pending photo.
+
+Upload authorizations expire after 10 minutes, are single-use, are bound to the user and submission, and are limited to 50 photos per submission. Authorization requests are rate-limited per user and IP. Client-supplied asset IDs, dimensions, formats, and byte sizes are not trusted.
+
+### User (implemented upload and submission APIs; remaining workflows planned)
 
 | Method | Path | Status | Purpose |
 |---|---|---|---|
 | `GET` | `/api/v1/me` | Implemented | Current profile |
 | `PATCH` | `/api/v1/me` | Implemented | Update profile |
+| `POST` | `/api/v1/me/submissions` | Implemented | Create a submission targeting an event and optional album |
+| `GET` | `/api/v1/me/submissions` | Implemented | List own submissions |
+| `POST` | `/api/v1/me/uploads/authorize` | Implemented | Request a short-lived signed Cloudinary upload |
+| `POST` | `/api/v1/me/submissions/{id}/photos` | Implemented | Verify and register an uploaded asset with metadata and photographer credits |
 | `GET` | `/api/v1/me/photos` | Planned | Own submissions |
-| `POST` | `/api/v1/me/submissions` | Planned | Create submission batch |
-| `POST` | `/api/v1/me/uploads/authorize` | Planned | Request signed Cloudinary upload |
-| `POST` | `/api/v1/me/submissions/{id}/photos` | Planned | Register verified uploaded asset |
 | `POST` | `/api/v1/me/event-suggestions` | Planned | Suggest an event |
 | `POST` | `/api/v1/me/photos/{id}/removal-request` | Planned | Request removal |
 | `POST` | `/api/v1/photos/{id}/reports` | Planned | Report a photograph |

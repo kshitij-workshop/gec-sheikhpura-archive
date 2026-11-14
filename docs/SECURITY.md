@@ -32,7 +32,18 @@ Phase 03 implements the public archive boundary and archive administration:
 - Only `ADMIN` and `SUPER_ADMIN` may create, update, publish, or archive archive structure.
 - Public responses expose DTOs rather than JPA entities and do not expose uploader identities or private moderation state.
 
-Uploads, Cloudinary verification, moderation workflows, and the remaining RBAC operations are implemented in later phases. This document records both the implemented baseline and the required target design.
+Phase 04 implements the upload boundary:
+
+- Only authenticated active users can create submissions or request upload authorization.
+- Upload authorizations are single-use, short-lived, bound to the submitting user and submission, and contain a server-generated Cloudinary public ID.
+- The Cloudinary API secret never leaves the backend.
+- The returned Cloudinary asset is verified through the trusted Admin API before a photo row is created.
+- Resource type, delivery type, public ID, asset ID, format, dimensions, byte size, and creation time are validated server-side.
+- Only JPEG, PNG, and WebP assets up to 15 MB are accepted; each submission is limited to 50 photos.
+- Photographer attribution is explicitly supplied and never derived from the uploader.
+- Expired unused authorizations trigger best-effort Cloudinary cleanup.
+
+Moderation workflows and the remaining RBAC operations are implemented in later phases. This document records both the implemented baseline and the required target design.
 
 ## 2. Security principles
 
@@ -247,6 +258,8 @@ Before creating a photo record, the backend must verify through a trusted Cloudi
 - The asset is owned by the expected account/environment.
 - The asset is not already attached to another photo record.
 
+**Phase 04 implementation:** the API compares the verified response to the authorization's server-generated public ID, requires `resource_type=image` and `type=upload`, checks the allowed format/size/dimensions, checks the Cloudinary creation time against the authorization window, and rejects duplicate public or asset IDs. Only after all checks pass is a `PENDING` photo and its photographer-credit rows persisted.
+
 Never trust client-provided URLs, public IDs, byte sizes, formats, or dimensions.
 
 ### Private pending assets
@@ -345,6 +358,8 @@ Phase 02 covers the authentication and authorization items below with automated 
 - Suspension takes effect on an existing access token. ✅ `AuthLoginIT`
 - Forced password change blocks other endpoints. ✅ `PasswordChangeRequiredIT`
 - Rate limits apply to login and upload authorization. ✅ login in `RateLimitIT`; uploads in Phase 04
+- Upload authorization is bound to the user and submission and cannot be reused. ✅ `UploadIntegrationIT`
+- Unverified or invalid Cloudinary assets cannot become photo records. ✅ `UploadIntegrationIT`
 - Validation rejects oversized, unsupported, and malformed input. ✅ auth DTOs
 - Error responses do not leak stack traces or secrets. ✅ problem-detail handlers
 

@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 01 defines the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication schema and security state. Phase 03 activates the academic-year, category, event, album, and public-photo query model through services and APIs. Uploads and moderation workflows are implemented in later phases.
+Phase 01 defines the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication schema and security state. Phase 03 activates archive management and public reads. Phase 04 adds upload authorization state and activates submission/photo registration through trusted Cloudinary verification. Moderation remains a later phase.
 
 Flyway migrations are the only source of schema truth. Hibernate runs with `ddl-auto=validate`; it never creates or alters tables.
 
@@ -52,6 +52,7 @@ PostgreSQL enum types are not used. Every enumeration is stored as a constrained
 | `albums` | Curated photo collections | Belongs to one event; has many photos |
 | `photo_submissions` | Submission batch and tracking aggregate | Created by a user; targets one event and optionally an album |
 | `photos` | Photographic records and moderation state | Belongs to an event; optionally to an album and submission; uploaded by a user |
+| `upload_authorizations` | Short-lived, single-use signed upload grants | Belongs to one user and submission; stores only signature/public-ID metadata |
 | `photo_moderations` | Append-only moderation history | Belongs to a photo; records actor, action, reason, prior/new state |
 | `photo_reports` | User reports of inappropriate or unauthorized content | Belongs to a photo and reporter; handled by an administrator |
 | `photo_removal_requests` | Owner-initiated takedown requests | Belongs to a photo and requester; handled by an administrator |
@@ -73,6 +74,7 @@ erDiagram
     users ||--o{ photo_removal_requests : requests
     users ||--o{ refresh_tokens : owns
     users ||--o{ auth_tokens : receives
+    users ||--o{ upload_authorizations : receives
     users ||--o| contributor_profiles : links
     users ||--o{ audit_logs : performs
 
@@ -84,6 +86,7 @@ erDiagram
     events ||--o{ photo_submissions : targets
     albums ||--o{ photos : contains
     photo_submissions ||--o{ photos : groups
+    photo_submissions ||--o{ upload_authorizations : authorizes
 
     photos ||--o{ photo_moderations : has
     photos ||--o{ photo_reports : receives
@@ -184,6 +187,14 @@ Public APIs must apply this predicate consistently once domain endpoints are imp
 - Set to `true` for the environment-bootstrapped first SUPER_ADMIN.
 - Cleared on password change or password reset.
 - When true, the API blocks every endpoint except profile read, password change, CSRF, refresh, and logout.
+
+`upload_authorizations`:
+
+- Stores a server-generated Cloudinary `public_id`, signature, timestamp, expiry, user, and submission.
+- It does not store raw image bytes, URLs, client metadata, or Cloudinary secrets.
+- `used_at` makes an authorization single-use at the application transaction boundary.
+- Expired unused rows are cleaned up after a best-effort Cloudinary asset deletion.
+- The user/submission foreign keys preserve ownership and prevent cross-account attachment.
 
 ## 7. Enumerations
 

@@ -4,7 +4,7 @@ A community-driven digital photography archive for Government Engineering Colleg
 
 The archive preserves college events, photographs, albums, and contributor credits in one public, moderated platform. Registered contributors submit photographs; administrators review submissions before publication.
 
-> **Status:** Phase 03 — archive management and public archive APIs complete on the backend. Academic years, categories, events, albums, public visibility, pagination, and admin lifecycle operations are implemented and tested. Uploads and moderation workflows are not implemented yet.
+> **Status:** Phase 04 — authenticated Cloudinary upload and submission APIs complete on the backend. Signed upload authorization, trusted asset verification, submission tracking, metadata, photographer credits, limits, rate limiting, and expired-upload cleanup are implemented and tested. Moderation workflows are not implemented yet.
 
 ## Product principles
 
@@ -247,7 +247,7 @@ Verification and reset emails are delivered to Mailpit locally at http://localho
 | 01 | Database and backend foundation | Complete |
 | 02 | Authentication and authorization | Complete |
 | 03 | Archive management | Complete |
-| 04 | Image upload | Not started |
+| 04 | Image upload | Complete |
 | 05 | Moderation | Not started |
 | 06 | Frontend foundation | Not started |
 | 07 | Public website | Not started |
