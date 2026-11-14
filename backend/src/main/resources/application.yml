@@ -1,6 +1,14 @@
 spring:
   application:
     name: gecs-archive-api
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${MAIL_SMTP_STARTTLS:false}
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -61,6 +69,35 @@ springdoc:
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+  auth:
+    jwt:
+      issuer: ${APP_JWT_ISSUER:https://gecs-archive.example}
+      secret: ${APP_JWT_SECRET:}
+      access-token-ttl: ${APP_JWT_ACCESS_TOKEN_TTL:15m}
+    refresh-token:
+      idle-ttl: ${APP_REFRESH_TOKEN_IDLE_TTL:7d}
+      absolute-ttl: ${APP_REFRESH_TOKEN_ABSOLUTE_TTL:30d}
+      cookie-name: ${APP_REFRESH_COOKIE_NAME:gecs_refresh}
+      cookie-secure: ${APP_REFRESH_COOKIE_SECURE:true}
+    tokens:
+      verification-ttl: ${APP_EMAIL_VERIFICATION_TTL:24h}
+      password-reset-ttl: ${APP_PASSWORD_RESET_TTL:1h}
+    frontend-base-url: ${APP_FRONTEND_BASE_URL:http://localhost:5173}
+    bootstrap:
+      email: ${APP_BOOTSTRAP_SUPER_ADMIN_EMAIL:}
+      password: ${APP_BOOTSTRAP_SUPER_ADMIN_PASSWORD:}
+      display-name: ${APP_BOOTSTRAP_SUPER_ADMIN_DISPLAY_NAME:Archive Administrator}
+    rate-limit:
+      login-per-ip: ${APP_RATE_LIMIT_LOGIN_PER_IP:10}
+      login-per-account: ${APP_RATE_LIMIT_LOGIN_PER_ACCOUNT:5}
+      login-window: ${APP_RATE_LIMIT_LOGIN_WINDOW:15m}
+      register-per-ip: ${APP_RATE_LIMIT_REGISTER_PER_IP:5}
+      register-window: ${APP_RATE_LIMIT_REGISTER_WINDOW:1h}
+      forgot-password-per-account: ${APP_RATE_LIMIT_FORGOT_PER_ACCOUNT:3}
+      forgot-password-per-ip: ${APP_RATE_LIMIT_FORGOT_PER_IP:10}
+      forgot-password-window: ${APP_RATE_LIMIT_FORGOT_WINDOW:1h}
+      reset-password-per-ip: ${APP_RATE_LIMIT_RESET_PER_IP:5}
+      reset-password-window: ${APP_RATE_LIMIT_RESET_WINDOW:1h}
 
 logging:
   level:

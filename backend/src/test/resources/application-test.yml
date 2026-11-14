@@ -3,3 +3,28 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
+
+spring:
+  mail:
+    host: localhost
+    port: 1025
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173
+  auth:
+    jwt:
+      secret: test-only-jwt-secret-0123456789abcdef0123456789abcdef
+    refresh-token:
+      cookie-secure: false
+    frontend-base-url: http://localhost:5173
+    bootstrap:
+      email: ""
+      password: ""
+    rate-limit:
+      login-per-ip: 1000
+      login-per-account: 1000
+      register-per-ip: 1000
+      forgot-password-per-account: 1000
+      forgot-password-per-ip: 1000
+      reset-password-per-ip: 1000

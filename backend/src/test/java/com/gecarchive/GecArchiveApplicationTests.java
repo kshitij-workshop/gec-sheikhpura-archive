@@ -4,10 +4,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@ActiveProfiles("test")
 class GecArchiveApplicationTests extends AbstractIntegrationTest {
 
     @Autowired
@@ -25,8 +27,8 @@ class GecArchiveApplicationTests extends AbstractIntegrationTest {
                 "select metadata_value from app_metadata where metadata_key = 'schema_phase'",
                 String.class);
 
-        assertThat(appliedMigrations).isGreaterThanOrEqualTo(2);
+        assertThat(appliedMigrations).isGreaterThanOrEqualTo(3);
         assertThat(metadataRows).isEqualTo(1);
-        assertThat(schemaPhase).isEqualTo("phase-01");
+        assertThat(schemaPhase).isEqualTo("phase-02");
     }
 }

@@ -33,6 +33,9 @@ public class RefreshToken extends CreatedEntity {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
+    @Column(name = "family_expires_at", nullable = false)
+    private Instant familyExpiresAt;
+
     @Column(name = "revoked_at")
     private Instant revokedAt;
 
@@ -77,6 +80,14 @@ public class RefreshToken extends CreatedEntity {
 
     public void setExpiresAt(Instant expiresAt) {
         this.expiresAt = expiresAt;
+    }
+
+    public Instant getFamilyExpiresAt() {
+        return familyExpiresAt;
+    }
+
+    public void setFamilyExpiresAt(Instant familyExpiresAt) {
+        this.familyExpiresAt = familyExpiresAt;
     }
 
     public Instant getRevokedAt() {

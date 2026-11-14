@@ -17,6 +17,12 @@ springdoc:
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  auth:
+    jwt:
+      issuer: ${APP_JWT_ISSUER:https://gecs-archive.example}
+      secret: ${APP_JWT_SECRET:dev-only-jwt-secret-change-before-production-32-bytes}
+    refresh-token:
+      cookie-secure: ${APP_REFRESH_COOKIE_SECURE:false}
 
 logging:
   level:
