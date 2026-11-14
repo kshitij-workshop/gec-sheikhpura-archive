@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:5}
+
+logging:
+  level:
+    root: INFO
+    com.gecarchive: INFO
