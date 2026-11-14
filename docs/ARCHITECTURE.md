@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 00 establishes the repository, local infrastructure, backend, frontend, and verification pipelines. Phase 01 adds the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication and authorization. Phase 03 adds archive management and public read APIs. Phase 04 adds signed Cloudinary uploads, server-side asset verification, submission tracking, photographer credits, and expired-upload cleanup. Moderation workflows are implemented in later phases.
+Phase 00 establishes the repository, local infrastructure, backend, frontend, and verification pipelines. Phase 01 adds the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication and authorization. Phase 03 adds archive management and public read APIs. Phase 04 adds signed Cloudinary uploads, server-side asset verification, submission tracking, photographer credits, and expired-upload cleanup. Phase 05 adds the moderation state machine, user reporting, removal requests, event-suggestion review, administrative audit-log reads, and analytics.
 
 ## 2. Architectural style
 
@@ -44,15 +44,16 @@ com.gecarchive
 ├── event
 ├── album
 ├── photo
-├── moderation
+├── moderation     photo transitions, reports, removal requests
 ├── category
 ├── contributor
-├── report
 ├── analytics
 ├── audit
 ├── common
 └── GecArchiveApplication
 ```
+
+Report and removal-request governance lives in `moderation` alongside photo transitions because they share the same actors, audit conventions, and administration surface; there is no separate `report` package.
 
 Each domain uses only the layers it needs:
 
@@ -125,6 +126,16 @@ Phase 04 uses a `CloudinaryAssetVerifier` port. Production calls the Cloudinary 
 - Optimistic locking and conditional updates prevent conflicting actions.
 - Public visibility is a single, tested predicate combining photo, album, event, and soft-delete state.
 - Administrative actions produce audit records.
+
+Phase 05 implementation:
+
+1. `UploadService` registers a `PENDING` photo and writes the opening `SUBMIT` history row.
+2. `AdminModerationController` exposes the queue and the six transitions under `/api/v1/admin`, which requires `ADMIN` or `SUPER_ADMIN` at the URL level.
+3. `PhotoModerationService` owns the transition table, validates album/event agreement on approval, writes the moderation and audit rows, and re-derives the submission status — all in one transaction.
+4. `PhotoReportService` accepts reports only for publicly visible photographs; `PhotoRemovalRequestService` restricts requests to the uploader and reuses `PhotoModerationService` on approval so both entry points share one history format.
+5. `EventSuggestionService` reviews suggestions and optionally creates an unpublished draft event through `ArchiveAdminService`.
+6. `AuditLogQueryService` and `AnalyticsService` provide read-only administrative views over the append-only audit trail and status counters.
+7. Every state-changing request is validated and authorized on the server; frontend guards are usability only.
 
 ## 9. Cross-cutting concerns
 

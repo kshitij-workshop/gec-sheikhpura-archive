@@ -2,9 +2,11 @@
 
 ## 1. Status
 
-Phase 00 established the API conventions. Phase 01 added the database schema, entities, repositories, and shared pagination DTO. Phase 02 implements authentication, account management, and the authorization boundary. Phase 03 implements public academic-year, category, event, album, and approved-photo reads plus admin archive management. Upload, moderation, and report endpoints are implemented in later phases.
+Phase 00 established the API conventions. Phase 01 added the database schema, entities, repositories, and shared pagination DTO. Phase 02 implements authentication, account management, and the authorization boundary. Phase 03 implements public academic-year, category, event, album, and approved-photo reads plus admin archive management. Phase 04 implements signed uploads and verified photo registration. Phase 05 implements moderation, reporting, removal requests, event suggestions, audit-log reads, and analytics.
 
-This document records implemented contracts and the conventions that later endpoints must follow.
+Every endpoint documented below is now implemented.
+
+This document records implemented contracts and the conventions that must be followed when they change.
 
 ## 2. Base URL
 
@@ -181,7 +183,7 @@ Rules:
 
 ## 9. Archive management and public endpoints
 
-Phase 03 and Phase 04 implement the archive and upload endpoints below. Moderation, report, and suggestion endpoints are planned for later phases.
+Phase 03, Phase 04 and Phase 05 implement the archive, upload and governance endpoints below.
 
 ### Public (implemented)
 
@@ -209,7 +211,36 @@ Phase 03 and Phase 04 implement the archive and upload endpoints below. Moderati
 
 Upload authorizations expire after 10 minutes, are single-use, are bound to the user and submission, and are limited to 50 photos per submission. Authorization requests are rate-limited per user and IP. Client-supplied asset IDs, dimensions, formats, and byte sizes are not trusted.
 
-### User (implemented upload and submission APIs; remaining workflows planned)
+### Moderation flow
+
+1. Registration persists a `PENDING` photograph and writes the opening `SUBMIT` moderation record.
+2. `GET /admin/moderation/photos?status=PENDING` returns the oldest-first queue with photographer credits for attribution review.
+3. `POST /admin/photos/{id}/{approve|reject|flag|hide|remove|restore}` transitions the photograph. Every transition writes a `photo_moderations` row, an audit row, and re-derives the owning submission's status in one transaction.
+4. `GET /admin/photos/{id}/moderation-history` returns the append-only history.
+5. Approved photographs become publicly readable only when their album and event are also published and not deleted.
+
+Allowed transitions:
+
+| Action | From | To | Extra input |
+|---|---|---|---|
+| `approve` | `PENDING`, `FLAGGED` | `APPROVED` | `albumId` when the photograph has none; must belong to the same event |
+| `reject` | `PENDING`, `FLAGGED` | `REJECTED` | `reason` |
+| `flag` | `PENDING`, `APPROVED` | `FLAGGED` | `reason` |
+| `hide` | `APPROVED`, `FLAGGED`, `REJECTED` | `HIDDEN` | `reason` |
+| `remove` | any except `REMOVED` | `REMOVED` | `reason` |
+| `restore` | `FLAGGED`, `HIDDEN`, `REJECTED`, `REMOVED` | `PENDING` | `reason` |
+
+Any other pairing returns `409 Conflict`. `approved_at` and `approved_by_user_id` are set on approval and cleared whenever the photograph leaves `APPROVED`.
+
+Governance rules:
+
+- `POST /photos/{id}/reports` only resolves photographs that satisfy the public-visibility predicate, so pending and private submissions cannot be probed by identifier. One open (`PENDING` or `UNDER_REVIEW`) report per user per photograph.
+- `POST /me/photos/{id}/removal-request` is limited to the uploader; anyone else receives `404`. One `PENDING` request per user per photograph. Approving it drives the photograph through the shared `remove` transition.
+- `PATCH /admin/event-suggestions/{id}` only accepts `PENDING` suggestions. With `createEvent: true` it materialises an **unpublished** draft event, so nothing reaches the public archive until published separately.
+- `GET /admin/audit-logs` accepts optional `action`, `entityType` and `entityId` filters, newest first.
+- `GET /admin/analytics` returns status maps that always contain every known enum constant.
+
+### User (implemented)
 
 | Method | Path | Status | Purpose |
 |---|---|---|---|
@@ -219,12 +250,13 @@ Upload authorizations expire after 10 minutes, are single-use, are bound to the 
 | `GET` | `/api/v1/me/submissions` | Implemented | List own submissions |
 | `POST` | `/api/v1/me/uploads/authorize` | Implemented | Request a short-lived signed Cloudinary upload |
 | `POST` | `/api/v1/me/submissions/{id}/photos` | Implemented | Verify and register an uploaded asset with metadata and photographer credits |
-| `GET` | `/api/v1/me/photos` | Planned | Own submissions |
-| `POST` | `/api/v1/me/event-suggestions` | Planned | Suggest an event |
-| `POST` | `/api/v1/me/photos/{id}/removal-request` | Planned | Request removal |
-| `POST` | `/api/v1/photos/{id}/reports` | Planned | Report a photograph |
+| `GET` | `/api/v1/me/photos` | Implemented | Own photographs with moderation status; no delivery URLs |
+| `POST` | `/api/v1/me/event-suggestions` | Implemented | Suggest an event |
+| `GET` | `/api/v1/me/event-suggestions` | Implemented | Track own suggestions |
+| `POST` | `/api/v1/me/photos/{id}/removal-request` | Implemented | Request removal of an own photograph |
+| `POST` | `/api/v1/photos/{id}/reports` | Implemented | Report a publicly visible photograph |
 
-### Admin (implemented archive management; remaining workflows planned)
+### Admin (implemented)
 
 | Method | Path | Status | Purpose |
 |---|---|---|---|
@@ -247,18 +279,22 @@ Upload authorizations expire after 10 minutes, are single-use, are bound to the 
 | `POST` | `/api/v1/admin/albums` | Implemented | Create album |
 | `PATCH` | `/api/v1/admin/albums/{id}` | Implemented | Update/publish album |
 | `DELETE` | `/api/v1/admin/albums/{id}` | Implemented | Archive album |
-| `GET` | `/api/v1/admin/moderation/photos` | Planned | Moderation queue |
-| `POST` | `/api/v1/admin/photos/{id}/approve` | Planned | Approve |
-| `POST` | `/api/v1/admin/photos/{id}/reject` | Planned | Reject with reason |
-| `POST` | `/api/v1/admin/photos/{id}/flag` | Planned | Flag |
-| `POST` | `/api/v1/admin/photos/{id}/hide` | Planned | Hide |
-| `POST` | `/api/v1/admin/photos/{id}/remove` | Planned | Remove |
-| `GET` | `/api/v1/admin/reports` | Planned | Reports |
-| `PATCH` | `/api/v1/admin/reports/{id}` | Planned | Resolve or dismiss |
-| `GET` | `/api/v1/admin/event-suggestions` | Planned | Event suggestions |
-| `PATCH` | `/api/v1/admin/event-suggestions/{id}` | Planned | Review suggestion |
-| `GET` | `/api/v1/admin/audit-logs` | Planned | Audit history |
-| `GET` | `/api/v1/admin/analytics` | Planned | Administrative analytics |
+| `GET` | `/api/v1/admin/moderation/photos` | Implemented | Moderation queue, optionally filtered by `status` |
+| `GET` | `/api/v1/admin/photos/{id}/moderation-history` | Implemented | Append-only transition history |
+| `POST` | `/api/v1/admin/photos/{id}/approve` | Implemented | Approve, assigning an album when absent |
+| `POST` | `/api/v1/admin/photos/{id}/reject` | Implemented | Reject with reason |
+| `POST` | `/api/v1/admin/photos/{id}/flag` | Implemented | Flag with reason |
+| `POST` | `/api/v1/admin/photos/{id}/hide` | Implemented | Hide with reason |
+| `POST` | `/api/v1/admin/photos/{id}/remove` | Implemented | Remove with reason |
+| `POST` | `/api/v1/admin/photos/{id}/restore` | Implemented | Restore to `PENDING` with reason |
+| `GET` | `/api/v1/admin/reports` | Implemented | Reports, optionally filtered by `status` |
+| `PATCH` | `/api/v1/admin/reports/{id}` | Implemented | Move to `UNDER_REVIEW`, `RESOLVED` or `DISMISSED` |
+| `GET` | `/api/v1/admin/removal-requests` | Implemented | Removal requests, optionally filtered by `status` |
+| `PATCH` | `/api/v1/admin/removal-requests/{id}` | Implemented | Approve (which removes the photo) or reject |
+| `GET` | `/api/v1/admin/event-suggestions` | Implemented | Event suggestions, optionally filtered by `status` |
+| `PATCH` | `/api/v1/admin/event-suggestions/{id}` | Implemented | Review suggestion, optionally creating an event |
+| `GET` | `/api/v1/admin/audit-logs` | Implemented | Audit history, filterable by action/entity |
+| `GET` | `/api/v1/admin/analytics` | Implemented | Administrative analytics |
 
 ## 10. Operational endpoints
 

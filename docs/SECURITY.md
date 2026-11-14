@@ -43,7 +43,18 @@ Phase 04 implements the upload boundary:
 - Photographer attribution is explicitly supplied and never derived from the uploader.
 - Expired unused authorizations trigger best-effort Cloudinary cleanup.
 
-Moderation workflows and the remaining RBAC operations are implemented in later phases. This document records both the implemented baseline and the required target design.
+Phase 05 implements moderation and content governance:
+
+- All moderation endpoints live under `/api/v1/admin/**`, which requires `ADMIN` or `SUPER_ADMIN` on the server side; ordinary users receive `403`.
+- Every photo transition follows the documented state machine, writes an append-only `photo_moderations` row and an audit row in the same transaction, and re-derives the owning submission's status.
+- Approval requires an album belonging to the photo's own event; `approved_at` and `approved_by_user_id` are set only on approval and cleared whenever the photo leaves `APPROVED`.
+- Reports only target photographs that satisfy the public-visibility predicate, so pending or private submissions cannot be probed by identifier. One open report per user per photograph.
+- Removal requests are limited to the uploader; anyone else receives `404`. Approval drives the shared `remove` moderation transition.
+- Approved event suggestions materialise unpublished draft events only; publication remains a separate administrative action.
+- Audit-log and analytics reads are administrative; audit rows stay append-only.
+- `GET /me/photos` exposes no delivery URLs, so pending and rejected assets stay unreachable through public image URLs.
+
+This document records both the implemented baseline and the required target design.
 
 ## 2. Security principles
 
@@ -343,12 +354,15 @@ Phase 02 covers the authentication and authorization items below with automated 
 
 - Guest cannot access private submissions. (Phase 04)
 - User cannot access another user's submissions. (Phase 04)
-- User cannot approve, reject, hide, or remove photographs. (Phase 05)
+- User cannot approve, reject, hide, or remove photographs. ✅ `ModerationIntegrationIT`
 - Admin cannot promote themselves to super admin. ✅ `AuthorizationIT`
 - Admin cannot demote the last super admin. ✅ `AuthorizationIT`
 - User cannot reach admin endpoints. ✅ `AuthorizationIT`
-- Rejected photographs never appear in public APIs. (Phase 05)
-- Hidden and removed photographs never appear publicly. (Phase 05)
+- Rejected photographs never appear in public APIs. ✅ `ModerationIntegrationIT`
+- Hidden and removed photographs never appear publicly. ✅ `ModerationIntegrationIT`
+- Reports cannot target non-public photographs. ✅ `ModerationIntegrationIT`
+- Only the uploader may request removal of an own photograph. ✅ `ModerationIntegrationIT`
+- Users cannot modify another user's submissions. ✅ `ModerationIntegrationIT`
 - Public endpoints do not expose private metadata or uploader details. (Phase 03)
 - Unverified Cloudinary assets cannot become photo records. (Phase 04)
 - A verified asset cannot be attached twice. (Phase 04)

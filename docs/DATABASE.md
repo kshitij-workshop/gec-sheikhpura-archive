@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 01 defines the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication schema and security state. Phase 03 activates archive management and public reads. Phase 04 adds upload authorization state and activates submission/photo registration through trusted Cloudinary verification. Moderation remains a later phase.
+Phase 01 defines the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication schema and security state. Phase 03 activates archive management and public reads. Phase 04 adds upload authorization state and activates submission/photo registration through trusted Cloudinary verification. Phase 05 activates the existing moderation schema: photo transitions, reports, removal requests, event suggestions, audit-log reads, and analytics. No new migration was required because V2 already defines every governance table with append-only triggers.
 
 Flyway migrations are the only source of schema truth. Hibernate runs with `ddl-auto=validate`; it never creates or alters tables.
 
@@ -127,6 +127,16 @@ erDiagram
 - Conflicting concurrent actions are prevented with optimistic locking or conditional updates.
 - `FLAGGED`, `HIDDEN`, and `REMOVED` photographs never appear in public queries.
 - A batch's status is derived and maintained by the service layer; it never replaces per-photo state.
+
+Phase 05 activates this design:
+
+- Registration writes the opening `SUBMIT` moderation row, so every history starts with the original contribution.
+- The allowed transition table lives in `PhotoModerationService`; any other pairing returns `409`. The `photos.version` column supplies optimistic locking for concurrent actions.
+- `approved_at` and `approved_by_user_id` are set on approval and cleared whenever a photo leaves `APPROVED`, so the database check constraints always hold.
+- Approval requires `album_id` from the photo's own event, satisfying the composite `(album_id, event_id)` foreign key.
+- Submission status is re-derived after each transition: all photos `PENDING` → `PENDING`; no photos `PENDING`/`FLAGGED` → `COMPLETED`; otherwise `IN_REVIEW`. `WITHDRAWN` is never overwritten.
+- Moderation never sets `photos.deleted_at`; status alone governs visibility, and `deleted_at` stays reserved for archive-level soft deletion.
+- Reports, removal requests, and event suggestions are versioned with `version`, so concurrent administrative updates surface as `409` rather than a lost write.
 
 ### 6.4 Soft deletion and public visibility
 
@@ -284,4 +294,4 @@ Use `EXPLAIN ANALYZE` for expensive public gallery and search queries. Do not ad
 2. Retention duration for originals, rejected uploads, and removed photographs (Phase 04/05).
 3. Contributor claiming and profile-edit permissions (Phase 08).
 4. Production backup, restore, and archival procedure (Phase 11).
-5. Whether guest reporting is introduced after rate limiting and abuse controls (Phase 05/10).
+5. Whether guest reporting is introduced after rate limiting and abuse controls (Phase 05 added authenticated reporting only; still deferred to Phase 10).

@@ -31,6 +31,7 @@ Each record contains:
 | ADR-0016 | Environment bootstrapped SUPER_ADMIN with forced password rotation | Accepted |
 | ADR-0017 | Archive lifecycle and public visibility boundary | Accepted |
 | ADR-0018 | Server-bound signed Cloudinary uploads and trusted verification | Accepted |
+| ADR-0019 | Moderation transition table and derived submission status | Accepted |
 
 ---
 
@@ -539,3 +540,33 @@ Image bytes should not transit the API, but a browser-controlled Cloudinary resp
 - Cloudinary credentials and delivery semantics are isolated to one provider adapter.
 - Cleanup is best effort and must be monitored for provider outages.
 - Cloudinary production credentials and restricted upload presets are deployment requirements.
+
+---
+
+## ADR-0019 — Moderation transition table and derived submission status
+
+**Status:** Accepted
+
+### Context
+
+Phase 05 activates the moderation schema defined in V2. Moderation must be predictable for administrators, safe against concurrent actions, and impossible to bypass for publication. Submission batches aggregate many photographs whose individual outcomes may differ, so the batch status needs a single authoritative rule.
+
+### Decision
+
+- Enforce an explicit transition table in `PhotoModerationService`: `approve` (`PENDING`/`FLAGGED` → `APPROVED`), `reject` (`PENDING`/`FLAGGED` → `REJECTED`), `flag` (`PENDING`/`APPROVED` → `FLAGGED`), `hide` (`APPROVED`/`FLAGGED`/`REJECTED` → `HIDDEN`), `remove` (any state except `REMOVED` → `REMOVED`), and `restore` (`FLAGGED`/`HIDDEN`/`REJECTED`/`REMOVED` → `PENDING`). Every other pairing returns `409 Conflict`.
+- Require a reason for `reject`, `flag`, `hide`, `remove`, and `restore`.
+- Require an album belonging to the photo's own event for approval; set `approved_at` and `approved_by_user_id` only there, and clear them whenever a photo leaves `APPROVED`.
+- Write the `photo_moderations` row and the audit row, and re-derive the submission status in the same transaction as the status change; rely on `photos.version` for optimistic locking.
+- Derive submission status from per-photo state: all photos `PENDING` → `PENDING`; no photos `PENDING`/`FLAGGED` → `COMPLETED`; otherwise `IN_REVIEW`. Never overwrite `WITHDRAWN`.
+- Keep moderation history append-only through the existing database triggers; never write `photos.deleted_at` from moderation.
+- Restrict reporting to photographs that satisfy the public-visibility predicate, allow one open report per user per photograph, and limit removal requests to the uploader (others receive `404`); approving a removal request reuses the `remove` transition.
+- Review event suggestions only from `PENDING`, and materialise `createEvent: true` as an unpublished draft event through `ArchiveAdminService`.
+
+### Consequences
+
+- Administrators get deterministic, explainable rejections instead of silent no-ops.
+- The public archive can never contain a photograph that skipped approval or lost its album.
+- Concurrent moderation attempts resolve to `409` rather than a lost update.
+- Submission status stays consistent with what a reviewer actually sees in the queue.
+- Removal requested by a user and removal performed by an admin produce identical history and audit records.
+- Restoring always returns a photograph to `PENDING`, so previously approved content is re-reviewed before publication.
