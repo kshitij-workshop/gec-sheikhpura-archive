@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 00 establishes the repository, local infrastructure, backend, frontend, and verification pipelines. Phase 01 adds the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds the authentication and authorization module: registration, email verification, login, JWT access tokens, rotating refresh cookies, CSRF protection, password reset, RBAC, super-admin bootstrap, and audit records. Uploads, moderation workflows, and public endpoints are implemented in later phases.
+Phase 00 establishes the repository, local infrastructure, backend, frontend, and verification pipelines. Phase 01 adds the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication and authorization. Phase 03 adds archive management for academic years, categories, events, and albums, plus public read APIs with the approved-content visibility boundary. Uploads and moderation workflows are implemented in later phases.
 
 ## 2. Architectural style
 

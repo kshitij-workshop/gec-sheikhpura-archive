@@ -61,7 +61,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository)
                         .csrfTokenRequestHandler(csrfRequestHandler)
-                        .ignoringRequestMatchers(PUBLIC_AUTH_POSTS))
+                        .ignoringRequestMatchers(PUBLIC_AUTH_POSTS)
+                        .ignoringRequestMatchers(request -> {
+                            String authorization = request.getHeader("Authorization");
+                            return authorization != null && authorization.startsWith("Bearer ");
+                        }))
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
@@ -73,6 +77,15 @@ public class SecurityConfig {
                                 "/swagger-ui.html")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/academic-years",
+                                "/api/v1/categories",
+                                "/api/v1/events",
+                                "/api/v1/events/**",
+                                "/api/v1/albums",
+                                "/api/v1/albums/**",
+                                "/api/v1/photos/**")
+                        .permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_AUTH_POSTS).permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/refresh",
