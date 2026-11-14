@@ -11,6 +11,8 @@ Phase 00 implements a minimal security baseline:
 - OpenAPI and Swagger UI enabled only outside production.
 - No secrets committed to the repository.
 
+Phase 01 adds database-level security invariants: `GUEST` cannot be persisted as a role, approved photos require an album from the same event, public visibility requires approved photos in published non-deleted albums and events, and moderation/audit history is append-only at the database level.
+
 Authentication, cookie-based sessions, CSRF protection, upload authorization, and full RBAC are implemented in later phases. This document records both the implemented baseline and the required target design.
 
 ## 2. Security principles

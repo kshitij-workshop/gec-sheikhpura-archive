@@ -4,7 +4,7 @@ A community-driven digital photography archive for Government Engineering Colleg
 
 The archive preserves college events, photographs, albums, and contributor credits in one public, moderated platform. Registered contributors submit photographs; administrators review submissions before publication.
 
-> **Status:** Phase 00 — foundation complete. The public archive, authentication, uploads, and moderation workflows are not implemented yet.
+> **Status:** Phase 01 — data foundation complete. The domain schema, entities, and repositories exist. Public endpoints, authentication, uploads, and moderation workflows are not implemented yet.
 
 ## Product principles
 
@@ -207,7 +207,7 @@ CI is defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Depende
 | Phase | Scope | Status |
 |---|---|---|
 | 00 | Project setup and toolchains | Complete |
-| 01 | Database and backend foundation | Not started |
+| 01 | Database and backend foundation | Complete |
 | 02 | Authentication and authorization | Not started |
 | 03 | Archive management | Not started |
 | 04 | Image upload | Not started |

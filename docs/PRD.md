@@ -8,7 +8,7 @@
 
 **Type:** Community-driven digital photography archive.
 
-**Status:** Phase 00 foundation. This document describes the intended product; most features are not implemented yet.
+**Status:** Phase 01 data foundation. This document describes the intended product; most features are not implemented yet.
 
 ## 2. Problem
 

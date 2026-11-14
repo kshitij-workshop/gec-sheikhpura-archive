@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 00 exposes only operational endpoints. Domain endpoints are designed and implemented in Phases 01–05. This document defines the conventions that all endpoints must follow.
+Phase 01 adds the database schema, entities, repositories, and shared pagination DTO. It does not expose domain endpoints yet; those are implemented in Phases 02–05. This document defines the conventions that all endpoints must follow.
 
 ## 2. Base URL
 
