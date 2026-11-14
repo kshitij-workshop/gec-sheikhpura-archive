@@ -21,8 +21,12 @@ class GecArchiveApplicationTests extends AbstractIntegrationTest {
         Integer metadataRows = jdbcTemplate.queryForObject(
                 "select count(*) from app_metadata",
                 Integer.class);
+        String schemaPhase = jdbcTemplate.queryForObject(
+                "select metadata_value from app_metadata where metadata_key = 'schema_phase'",
+                String.class);
 
-        assertThat(appliedMigrations).isPositive();
+        assertThat(appliedMigrations).isGreaterThanOrEqualTo(2);
         assertThat(metadataRows).isEqualTo(1);
+        assertThat(schemaPhase).isEqualTo("phase-01");
     }
 }

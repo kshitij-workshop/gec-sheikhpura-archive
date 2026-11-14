@@ -1,0 +1,18 @@
+package com.gecarchive.auth.repository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import com.gecarchive.auth.entity.RefreshToken;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
+
+    Optional<RefreshToken> findByTokenHash(String tokenHash);
+
+    List<RefreshToken> findByFamilyId(UUID familyId);
+
+    List<RefreshToken> findByUser_Id(UUID userId);
+}

@@ -1,0 +1,17 @@
+package com.gecarchive.event.repository;
+
+import java.util.Optional;
+import java.util.UUID;
+
+import com.gecarchive.event.entity.Event;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface EventRepository extends JpaRepository<Event, UUID> {
+
+    Optional<Event> findBySlug(String slug);
+
+    Page<Event> findByPublishedTrueAndDeletedAtIsNull(Pageable pageable);
+}
