@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 00 established the API conventions. Phase 01 added the database schema, entities, repositories, and shared pagination DTO. Phase 02 implements authentication, account management, and the authorization boundary. Domain endpoints for events, albums, photos, moderation, and reports are implemented in later phases.
+Phase 00 established the API conventions. Phase 01 added the database schema, entities, repositories, and shared pagination DTO. Phase 02 implements authentication, account management, and the authorization boundary. Phase 03 implements public academic-year, category, event, album, and approved-photo reads plus admin archive management. Upload, moderation, and report endpoints are implemented in later phases.
 
 This document records implemented contracts and the conventions that later endpoints must follow.
 
@@ -179,22 +179,26 @@ Rules:
 - Use explicit filter parameters; do not expose arbitrary query languages.
 - Public list endpoints return only published, approved, non-deleted content.
 
-## 9. Endpoint roadmap
+## 9. Archive management and public endpoints
 
-Public domain endpoints and the remaining user/admin workflows are contract placeholders, not implemented endpoints. Implemented authentication, account, and role-management contracts are documented in section 7.
+Phase 03 implements the archive endpoints below. Remaining contribution, upload, moderation, report, and suggestion endpoints are planned for later phases.
 
-### Public (Phase 03)
+### Public (implemented)
 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/v1/events` | Paginated published events |
 | `GET` | `/api/v1/events/{id}` | Published event details |
+| `GET` | `/api/v1/events/slug/{slug}` | Published event details by slug |
 | `GET` | `/api/v1/albums/{id}` | Published album and its approved photos |
+| `GET` | `/api/v1/albums/slug/{slug}` | Published album by slug and its approved photos |
 | `GET` | `/api/v1/photos/{id}` | Approved photo details |
 | `GET` | `/api/v1/academic-years` | Public academic timeline |
 | `GET` | `/api/v1/categories` | Public categories |
 | `GET` | `/api/v1/contributors` | Public contributor directory |
 | `GET` | `/api/v1/search` | Archive search |
+
+`GET /events` accepts `page`, `size`, and optional case-insensitive `query` title filtering. `GET /albums/{id}` accepts `page` and `size` for approved photo pagination. `GET /photos/{id}` returns a photo only when it satisfies the complete event/album/photo publication predicate. Public album photo results apply the same predicate.
 
 ### User (Phase 04–05)
 
@@ -210,13 +214,29 @@ Public domain endpoints and the remaining user/admin workflows are contract plac
 | `POST` | `/api/v1/me/photos/{id}/removal-request` | Planned | Request removal |
 | `POST` | `/api/v1/photos/{id}/reports` | Planned | Report a photograph |
 
-### Admin (Phase 02 and Phase 05–06)
+### Admin (implemented archive management; remaining workflows planned)
 
 | Method | Path | Status | Purpose |
 |---|---|---|---|
 | `GET` | `/api/v1/admin/users` | Implemented | User directory |
 | `PATCH` | `/api/v1/admin/users/{id}/status` | Implemented | Suspend or reactivate |
 | `PATCH` | `/api/v1/admin/users/{id}/role` | Implemented (`SUPER_ADMIN`) | Change a role |
+| `GET` | `/api/v1/admin/academic-years` | Implemented | List all academic years |
+| `POST` | `/api/v1/admin/academic-years` | Implemented | Create academic year |
+| `PATCH` | `/api/v1/admin/academic-years/{id}` | Implemented | Update academic year |
+| `DELETE` | `/api/v1/admin/academic-years/{id}` | Implemented | Delete unused academic year |
+| `GET` | `/api/v1/admin/categories` | Implemented | List categories |
+| `POST` | `/api/v1/admin/categories` | Implemented | Create category |
+| `PATCH` | `/api/v1/admin/categories/{id}` | Implemented | Update category |
+| `DELETE` | `/api/v1/admin/categories/{id}` | Implemented | Deactivate category |
+| `GET` | `/api/v1/admin/events` | Implemented | List events, including unpublished records |
+| `POST` | `/api/v1/admin/events` | Implemented | Create event |
+| `PATCH` | `/api/v1/admin/events/{id}` | Implemented | Update/publish event |
+| `DELETE` | `/api/v1/admin/events/{id}` | Implemented | Archive event |
+| `GET` | `/api/v1/admin/albums?eventId={id}` | Implemented | List albums for an event |
+| `POST` | `/api/v1/admin/albums` | Implemented | Create album |
+| `PATCH` | `/api/v1/admin/albums/{id}` | Implemented | Update/publish album |
+| `DELETE` | `/api/v1/admin/albums/{id}` | Implemented | Archive album |
 | `GET` | `/api/v1/admin/moderation/photos` | Planned | Moderation queue |
 | `POST` | `/api/v1/admin/photos/{id}/approve` | Planned | Approve |
 | `POST` | `/api/v1/admin/photos/{id}/reject` | Planned | Reject with reason |

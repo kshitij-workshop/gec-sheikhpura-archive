@@ -25,6 +25,13 @@ Phase 02 implements authentication and authorization:
 - Append-only audit records for registration, verification, password changes, and role/status changes.
 - Per-IP and per-account rate limiting for authentication endpoints.
 
+Phase 03 implements the public archive boundary and archive administration:
+
+- Public GET endpoints expose only published, non-deleted events and albums.
+- Album photo responses use the existing approved-photo visibility predicate, which also requires a published, non-deleted parent event and album.
+- Only `ADMIN` and `SUPER_ADMIN` may create, update, publish, or archive archive structure.
+- Public responses expose DTOs rather than JPA entities and do not expose uploader identities or private moderation state.
+
 Uploads, Cloudinary verification, moderation workflows, and the remaining RBAC operations are implemented in later phases. This document records both the implemented baseline and the required target design.
 
 ## 2. Security principles

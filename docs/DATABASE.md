@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 01 defines the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds the authentication schema for refresh-token families, single-use email/reset tokens, and forced password rotation. Domain endpoints, uploads, and moderation workflows are implemented in later phases.
+Phase 01 defines the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication schema and security state. Phase 03 activates the academic-year, category, event, album, and public-photo query model through services and APIs. Uploads and moderation workflows are implemented in later phases.
 
 Flyway migrations are the only source of schema truth. Hibernate runs with `ddl-auto=validate`; it never creates or alters tables.
 

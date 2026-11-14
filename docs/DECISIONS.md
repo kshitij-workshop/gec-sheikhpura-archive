@@ -29,6 +29,7 @@ Each record contains:
 | ADR-0014 | Cookie CSRF tokens and Origin validation | Accepted |
 | ADR-0015 | Single-use hashed email verification and password reset tokens | Accepted |
 | ADR-0016 | Environment bootstrapped SUPER_ADMIN with forced password rotation | Accepted |
+| ADR-0017 | Archive lifecycle and public visibility boundary | Accepted |
 
 ---
 
@@ -476,3 +477,34 @@ The system needs an initial privileged account without committing credentials or
 - The first deployment requires deliberate secret configuration.
 - The bootstrap account cannot operate normally until its password is rotated.
 - Removing the environment variables after bootstrap leaves no privileged backdoor.
+
+---
+
+## ADR-0017 — Archive lifecycle and public visibility boundary
+
+**Status:** Accepted
+
+### Context
+
+Events and albums are editorial records. Administrators need to prepare unpublished records, while public visitors must never see drafts, archived records, or photos belonging to unpublished parents.
+
+### Decision
+
+- Academic years and categories are administrator-managed reference data.
+- Events belong to one academic year and one category; an event date must fall within the academic-year date range.
+- Albums belong to one event and have independent publication and archive state.
+- Event and album slugs are normalized to lowercase ASCII kebab case and must be globally unique.
+- Event and album archival is a soft-delete operation: publication is disabled and `deleted_at` is set.
+- Public reads use dedicated DTOs and repositories/services, never entities.
+- Public event results require `published=true` and `deleted_at IS NULL`.
+- Public album results require the same album predicate plus a published, non-deleted event.
+- Public photos require approved status, no deletion, and both published, non-deleted parents.
+- Administrative archive writes are restricted to `ADMIN` and `SUPER_ADMIN` and create audit records.
+
+### Consequences
+
+- Editorial drafts can be prepared without leaking to guests.
+- Retained records preserve references for future audit and attribution.
+- Every public photo query must preserve the shared visibility predicate.
+- Categories are deactivated rather than deleted; academic years can only be deleted when foreign-key dependencies permit it.
+- Upload and moderation state transitions remain Phase 04/05 responsibilities.
