@@ -22,7 +22,16 @@ public interface PhotoRepository extends JpaRepository<Photo, UUID> {
 
     Page<Photo> findByUploadedBy_IdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
+    Page<Photo> findByStatusOrderByCreatedAtAsc(PhotoStatus status, Pageable pageable);
+
+    Page<Photo> findAllByOrderByCreatedAtAsc(Pageable pageable);
+
     long countBySubmission_Id(UUID submissionId);
+
+    long countBySubmission_IdAndStatus(UUID submissionId, PhotoStatus status);
+
+    @Query("select photo.status, count(photo) from Photo photo group by photo.status")
+    java.util.List<Object[]> countGroupedByStatus();
 
     boolean existsByCloudinaryPublicId(String publicId);
 

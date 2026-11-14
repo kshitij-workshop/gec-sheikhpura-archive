@@ -10,6 +10,7 @@ import com.gecarchive.user.entity.UserStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
 
@@ -29,4 +30,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             String email, String displayName, Pageable pageable);
 
     Page<User> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    @Query("select user.status, count(user) from User user group by user.status")
+    java.util.List<Object[]> countGroupedByStatus();
+
+    @Query("select user.role, count(user) from User user group by user.role")
+    java.util.List<Object[]> countGroupedByRole();
 }

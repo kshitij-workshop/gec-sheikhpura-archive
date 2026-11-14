@@ -19,4 +19,8 @@ public interface AlbumRepository extends JpaRepository<Album, UUID> {
     Optional<Album> findBySlugAndPublishedTrueAndDeletedAtIsNull(String slug);
 
     List<Album> findByEvent_IdOrderBySortOrderAsc(UUID eventId);
+
+    long countByDeletedAtIsNull();
+
+    long countByPublishedTrueAndDeletedAtIsNull();
 }

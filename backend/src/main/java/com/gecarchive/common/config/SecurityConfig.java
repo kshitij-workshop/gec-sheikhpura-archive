@@ -91,6 +91,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/refresh",
                                 "/api/v1/auth/logout")
                         .permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/photos/*/reports").authenticated()
                         .requestMatchers("/api/v1/super-admin/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/me/**").authenticated()

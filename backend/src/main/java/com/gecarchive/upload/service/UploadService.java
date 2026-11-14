@@ -65,6 +65,7 @@ public class UploadService {
     private final CloudinaryProperties cloudinaryProperties;
     private final com.gecarchive.auth.service.RateLimitService rateLimiter;
     private final AuditService audit;
+    private final com.gecarchive.moderation.service.PhotoModerationService moderationHistory;
 
     public UploadService(EventRepository events, AlbumRepository albums, UserRepository users,
             PhotoSubmissionRepository submissions, PhotoRepository photos,
@@ -72,7 +73,7 @@ public class UploadService {
             UploadAuthorizationRepository authorizations, CloudinarySignatureService signatures,
             CloudinaryAssetVerifier cloudinary, UploadProperties uploadProperties,
             CloudinaryProperties cloudinaryProperties, com.gecarchive.auth.service.RateLimitService rateLimiter,
-            AuditService audit) {
+            AuditService audit, com.gecarchive.moderation.service.PhotoModerationService moderationHistory) {
         this.events = events;
         this.albums = albums;
         this.users = users;
@@ -87,6 +88,7 @@ public class UploadService {
         this.cloudinaryProperties = cloudinaryProperties;
         this.rateLimiter = rateLimiter;
         this.audit = audit;
+        this.moderationHistory = moderationHistory;
     }
 
     @Transactional
@@ -229,6 +231,7 @@ public class UploadService {
             }
             photographers.save(credit);
         }
+        moderationHistory.recordSubmission(photo, user(actor.id()));
         authorization.setUsedAt(Instant.now());
         authorizations.save(authorization);
         audit.record(user(actor.id()), "PHOTO_REGISTERED", "PHOTO", photo.getId(), null,

@@ -21,4 +21,8 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
     Page<Event> findByTitleContainingIgnoreCaseAndPublishedTrueAndDeletedAtIsNull(
             String title, Pageable pageable);
+
+    long countByDeletedAtIsNull();
+
+    long countByPublishedTrueAndDeletedAtIsNull();
 }

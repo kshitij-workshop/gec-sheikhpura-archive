@@ -7,6 +7,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -74,6 +75,20 @@ public class GlobalExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.CONFLICT,
                 "The request conflicts with the current state.");
+        problem.setTitle("Conflict");
+        return problem;
+    }
+
+    /**
+     * Moderation, report and suggestion rows are versioned, so a concurrent
+     * update surfaces as an optimistic-lock failure rather than a stale write.
+     */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    ProblemDetail handleOptimisticLock(OptimisticLockingFailureException exception) {
+        log.warn("Optimistic locking conflict rejected a concurrent update");
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                "This record changed while the request was in flight. Please retry.");
         problem.setTitle("Conflict");
         return problem;
     }
