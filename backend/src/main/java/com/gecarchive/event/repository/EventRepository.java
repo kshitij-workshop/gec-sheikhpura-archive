@@ -13,5 +13,12 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
     Optional<Event> findBySlug(String slug);
 
+    Optional<Event> findByIdAndPublishedTrueAndDeletedAtIsNull(UUID id);
+
+    Optional<Event> findBySlugAndPublishedTrueAndDeletedAtIsNull(String slug);
+
     Page<Event> findByPublishedTrueAndDeletedAtIsNull(Pageable pageable);
+
+    Page<Event> findByTitleContainingIgnoreCaseAndPublishedTrueAndDeletedAtIsNull(
+            String title, Pageable pageable);
 }

@@ -13,4 +13,6 @@ public interface AcademicYearRepository extends JpaRepository<AcademicYear, UUID
     Optional<AcademicYear> findByLabel(String label);
 
     List<AcademicYear> findAllByOrderByStartDateDesc();
+
+    boolean existsByLabelIgnoreCase(String label);
 }
