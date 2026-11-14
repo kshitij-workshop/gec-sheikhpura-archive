@@ -25,6 +25,10 @@ Each record contains:
 | ADR-0010 | Database-enforced append-only moderation and audit tables | Accepted |
 | ADR-0011 | Administrator-managed contributor profiles | Accepted |
 | ADR-0012 | Soft-delete retention and separated removal requests | Accepted |
+| ADR-0013 | Short-lived JWT access tokens with rotating opaque refresh cookies | Accepted |
+| ADR-0014 | Cookie CSRF tokens and Origin validation | Accepted |
+| ADR-0015 | Single-use hashed email verification and password reset tokens | Accepted |
+| ADR-0016 | Environment bootstrapped SUPER_ADMIN with forced password rotation | Accepted |
 
 ---
 
@@ -138,7 +142,7 @@ The product requires exactly four roles but also states that `GUEST` is an unaut
 
 ## ADR-0004 — Same-origin API proxy and cookie-based refresh tokens
 
-**Status:** Proposed — finalize in Phase 02
+**Status:** Accepted — implemented in Phase 02
 
 ### Context
 
@@ -367,3 +371,108 @@ Removed or rejected content must disappear publicly but remain available for aud
 - Public and private visibility must be tested separately.
 - Storage cleanup is a deliberate Phase 04 concern, not a database cascade.
 - Reports and removal requests can be analyzed independently.
+
+---
+
+## ADR-0013 — Short-lived JWT access tokens with rotating opaque refresh cookies
+
+**Status:** Accepted
+
+### Context
+
+The SPA needs stateless authorization for API calls without exposing long-lived credentials to JavaScript. Refresh credentials must survive page reloads, resist XSS, and support immediate revocation on security events.
+
+### Decision
+
+- Issue HS256 JWTs with a 15-minute TTL and only the claims `sub`, `role`, `jti`, `iss`, `iat`, `exp`.
+- Keep access tokens in frontend memory; never in `localStorage` or `sessionStorage`.
+- Issue opaque 256-bit refresh tokens, store only their SHA-256 hashes, and rotate on every refresh.
+- Group rotations into a family with an absolute 30-day deadline and a 7-day idle expiry.
+- Deliver the refresh token in an `HttpOnly`, `SameSite=Lax`, `Secure` (outside development) cookie scoped to `/api/v1/auth`.
+- Detect reuse of a rotated token and revoke the entire family.
+- Reload the user, role, and status from PostgreSQL on every authenticated request so revocation does not wait for token expiry.
+
+### Consequences
+
+- Access-token validation stays stateless and fast.
+- A stolen refresh token can be used at most once before reuse detection fires.
+- One extra database read occurs per authenticated request, accepted for immediate suspension semantics.
+- The HMAC secret must be at least 32 bytes and rotated deliberately; rotating it invalidates all access tokens.
+- Distributed deployments must share the same secret.
+
+---
+
+## ADR-0014 — Cookie CSRF tokens and Origin validation
+
+**Status:** Accepted
+
+### Context
+
+Refresh and logout authenticate with a cookie, which browsers attach automatically. Without CSRF protection, a third-party page could trigger session rotation or logout.
+
+### Decision
+
+- Use Spring Security's `CookieCsrfTokenRepository` with a readable `XSRF-TOKEN` cookie and `X-XSRF-TOKEN` header.
+- Require CSRF for refresh, logout, and any future cookie-authenticated state-changing request.
+- Ignore CSRF only for the unauthenticated auth flows (register, verify, resend, login, forgot, reset).
+- Reject state-changing `/api/**` requests whose `Origin` is present but not in the configured allowlist.
+- Keep CORS to an explicit credentialled origin allowlist.
+
+### Consequences
+
+- Cross-site requests cannot rotate or revoke sessions.
+- The frontend must read the `XSRF-TOKEN` cookie and echo it in the header.
+- Requests without an `Origin` header remain possible for non-browser clients; CSRF still applies where relevant.
+- Same-origin deployment through the `/api` rewrite keeps the cookies first-party.
+
+---
+
+## ADR-0015 — Single-use hashed email verification and password reset tokens
+
+**Status:** Accepted
+
+### Context
+
+Email verification and password reset require bearer values that travel through email, a channel that may be logged or forwarded. Long-lived or reusable tokens increase account-takeover risk.
+
+### Decision
+
+- Generate 256-bit opaque tokens and store only SHA-256 hashes in `auth_tokens`.
+- Record purpose (`EMAIL_VERIFICATION` or `PASSWORD_RESET`), expiry, and `used_at`.
+- Verification tokens expire after 24 hours; reset tokens after 1 hour.
+- Invalidate previous unused tokens of the same purpose when a new one is issued.
+- Return generic `202` responses so account existence is not revealed.
+- Revoke all refresh sessions after a successful password reset.
+
+### Consequences
+
+- Email links are single-use and short-lived.
+- A database leak does not expose usable tokens.
+- Resending invalidates older links, which is intentional.
+- Delivery failures must not change the API response; SMTP errors are logged without recipient details.
+
+---
+
+## ADR-0016 — Environment bootstrapped SUPER_ADMIN with forced password rotation
+
+**Status:** Accepted
+
+### Context
+
+The system needs an initial privileged account without committing credentials or shipping a default password. The bootstrap must be safe to run repeatedly and auditable.
+
+### Decision
+
+- Read the bootstrap email, password, and display name from environment variables.
+- Skip bootstrap when any active SUPER_ADMIN already exists or the email is already registered.
+- Validate the bootstrap password against the normal policy.
+- Mark the account active and verified, and set `password_change_required=true`.
+- Record `SUPER_ADMIN_BOOTSTRAPPED` in `audit_logs`.
+- Block all endpoints except profile read, password change, CSRF, refresh, and logout until the password is changed.
+
+### Consequences
+
+- No credentials are stored in the repository.
+- The first deployment requires deliberate secret configuration.
+- The bootstrap account cannot operate normally until its password is rotated.
+- Removing the environment variables after bootstrap leaves no privileged backdoor.

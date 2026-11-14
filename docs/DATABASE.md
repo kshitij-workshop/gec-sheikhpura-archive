@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 01 defines the domain schema, JPA entities, repositories, and shared DTO foundation. Domain endpoints, authentication, uploads, and moderation workflows are implemented in later phases.
+Phase 01 defines the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds the authentication schema for refresh-token families, single-use email/reset tokens, and forced password rotation. Domain endpoints, uploads, and moderation workflows are implemented in later phases.
 
 Flyway migrations are the only source of schema truth. Hibernate runs with `ddl-auto=validate`; it never creates or alters tables.
 
@@ -43,8 +43,9 @@ PostgreSQL enum types are not used. Every enumeration is stored as a constrained
 
 | Entity | Purpose | Key relationships |
 |---|---|---|
-| `users` | Accounts, roles, and status | Uploads photos, suggests events, reports photos, owns refresh tokens |
-| `refresh_tokens` | Rotating refresh-token families | Belongs to one user; hashed token value; expiry and revocation metadata |
+| `users` | Accounts, roles, and status | Uploads photos, suggests events, reports photos, owns refresh tokens and auth tokens |
+| `refresh_tokens` | Rotating refresh-token families | Belongs to one user; hashed token value; idle expiry, family expiry, and revocation metadata |
+| `auth_tokens` | Single-use email verification and password reset tokens | Belongs to one user; hashed token value, purpose, expiry, and usage timestamp |
 | `academic_years` | Institutional time periods | Has many events |
 | `categories` | Event classification | Has many events and event suggestions |
 | `events` | College events | Belongs to an academic year and category; has many albums and photos |
@@ -71,6 +72,7 @@ erDiagram
     users ||--o{ photo_reports : reports
     users ||--o{ photo_removal_requests : requests
     users ||--o{ refresh_tokens : owns
+    users ||--o{ auth_tokens : receives
     users ||--o| contributor_profiles : links
     users ||--o{ audit_logs : performs
 
@@ -158,6 +160,31 @@ Public APIs must apply this predicate consistently once domain endpoints are imp
 - Handling a report or removal request produces an audit record.
 - Guest reporting is intentionally deferred until abuse controls and rate limiting exist.
 
+### 6.7 Authentication data (Phase 02)
+
+`refresh_tokens`:
+
+- `token_hash` stores only the SHA-256 hex digest of a 256-bit opaque value; raw values are never persisted.
+- `family_id` groups all rotations of one login session.
+- `expires_at` is the idle expiry; `family_expires_at` is the absolute session deadline and never extends across rotations.
+- `family_expires_at >= expires_at` is enforced by a check constraint.
+- `revoked_at` plus `revocation_reason` record logout, rotation, reuse detection, password change, role change, and account-status revocation.
+
+`auth_tokens`:
+
+- `purpose` is constrained to `EMAIL_VERIFICATION` or `PASSWORD_RESET`.
+- `token_hash` is a unique SHA-256 hex digest; raw tokens exist only in outbound email.
+- `expires_at > created_at` is enforced, and `used_at` makes every token single-use.
+- Issuing a new token for the same user and purpose invalidates the previous unused token in the service layer.
+- Foreign key to `users` uses `ON DELETE RESTRICT`, preserving audit history.
+
+`users.password_change_required`:
+
+- Defaults to `false`.
+- Set to `true` for the environment-bootstrapped first SUPER_ADMIN.
+- Cleared on password change or password reset.
+- When true, the API blocks every endpoint except profile read, password change, CSRF, refresh, and logout.
+
 ## 7. Enumerations
 
 | Enum | Stored values |
@@ -180,6 +207,9 @@ Phase 01 creates indexes for known access paths:
 
 - `users (lower(email))` unique.
 - `refresh_tokens (token_hash)` unique, `(user_id)`, `(family_id)`.
+- `auth_tokens (token_hash)` unique.
+- `auth_tokens (user_id, purpose, created_at desc)`.
+- `auth_tokens (expires_at)` where `used_at IS NULL`.
 - `events (academic_year_id, event_date)`.
 - `events (category_id, event_date)`.
 - `events (published, event_date desc)` where not deleted.
@@ -228,7 +258,16 @@ Use `EXPLAIN ANALYZE` for expensive public gallery and search queries. Do not ad
 8. **Reports:** authenticated users only; open duplicates are prevented by partial unique indexes.
 9. **Removal requests:** separated from reports so takedown workflow and reporting analytics stay distinct.
 
-## 11. Remaining questions for later phases
+## 11. Resolved Phase 02 decisions
+
+1. **Refresh storage:** opaque 256-bit tokens hashed with SHA-256; no raw refresh value is stored.
+2. **Family expiry:** each refresh-token family has a fixed absolute deadline (`family_expires_at`); rotation only shortens the idle expiry.
+3. **Reuse detection:** using an already-rotated token revokes the whole family in an independent transaction so the revocation survives the failed request.
+4. **Verification and reset tokens:** a dedicated `auth_tokens` table with purpose, single-use `used_at`, and hashed values. Previous unused tokens for the same purpose are invalidated on reissue.
+5. **Forced rotation:** `users.password_change_required` drives API-wide enforcement until the bootstrap account changes its password.
+6. **Audit coverage:** registration, email verification, password reset/change, role changes, status changes, and bootstrap are recorded in `audit_logs`.
+
+## 12. Remaining questions for later phases
 
 1. Exact Cloudinary asset class and private-to-public delivery behavior (Phase 04).
 2. Retention duration for originals, rejected uploads, and removed photographs (Phase 04/05).

@@ -4,7 +4,7 @@ A community-driven digital photography archive for Government Engineering Colleg
 
 The archive preserves college events, photographs, albums, and contributor credits in one public, moderated platform. Registered contributors submit photographs; administrators review submissions before publication.
 
-> **Status:** Phase 01 — data foundation complete. The domain schema, entities, and repositories exist. Public endpoints, authentication, uploads, and moderation workflows are not implemented yet.
+> **Status:** Phase 02 — authentication and authorization complete on the backend. Registration, email verification, login, JWT access tokens, rotating refresh cookies, CSRF, password reset, role management, and audit records are implemented and tested. Public archive endpoints, uploads, and moderation workflows are not implemented yet.
 
 ## Product principles
 
@@ -191,6 +191,43 @@ CI is defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Depende
 - Frontend environment variables must be public by definition; never place secrets in `VITE_*` variables.
 - See `docs/SECURITY.md` for the full security model.
 
+### Authentication configuration
+
+The API refuses to start without a JWT secret of at least 32 bytes. The `dev` profile supplies a development-only value; production must set `APP_JWT_SECRET`.
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `APP_JWT_SECRET` | HS256 signing secret | Required outside `dev` |
+| `APP_JWT_ISSUER` | JWT `iss` claim | `https://gecs-archive.example` |
+| `APP_JWT_ACCESS_TOKEN_TTL` | Access-token lifetime | `15m` |
+| `APP_REFRESH_TOKEN_IDLE_TTL` | Refresh idle expiry | `7d` |
+| `APP_REFRESH_TOKEN_ABSOLUTE_TTL` | Refresh family deadline | `30d` |
+| `APP_REFRESH_COOKIE_SECURE` | `Secure` flag on the refresh cookie | `true` (set `false` for local HTTP) |
+| `APP_EMAIL_VERIFICATION_TTL` | Verification link lifetime | `24h` |
+| `APP_PASSWORD_RESET_TTL` | Reset link lifetime | `1h` |
+| `APP_FRONTEND_BASE_URL` | Base URL used in email links | `http://localhost:5173` |
+| `APP_BOOTSTRAP_SUPER_ADMIN_EMAIL` | One-time bootstrap account | unset |
+| `APP_BOOTSTRAP_SUPER_ADMIN_PASSWORD` | One-time bootstrap password | unset |
+| `APP_BOOTSTRAP_SUPER_ADMIN_DISPLAY_NAME` | Bootstrap display name | `Archive Administrator` |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed origins | `http://localhost:5173` in `dev` |
+| `MAIL_HOST` / `MAIL_PORT` | SMTP host and port | `localhost:1025` |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP credentials | empty |
+| `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS` | SMTP features | `false` |
+
+### Bootstrapping the first super administrator
+
+```bash
+export APP_JWT_SECRET="$(openssl rand -base64 48)"
+export APP_BOOTSTRAP_SUPER_ADMIN_EMAIL="admin@example.com"
+export APP_BOOTSTRAP_SUPER_ADMIN_PASSWORD="ChangeMeImmediately123"
+cd backend
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+Bootstrap is skipped when an active `SUPER_ADMIN` already exists. The account starts with `passwordChangeRequired=true`, so it can only read its profile and change its password until rotation is complete. Remove the bootstrap variables after the first successful start.
+
+Verification and reset emails are delivered to Mailpit locally at http://localhost:8025.
+
 ## Documentation
 
 - [`docs/PRD.md`](docs/PRD.md) — product requirements and scope
@@ -208,7 +245,7 @@ CI is defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Depende
 |---|---|---|
 | 00 | Project setup and toolchains | Complete |
 | 01 | Database and backend foundation | Complete |
-| 02 | Authentication and authorization | Not started |
+| 02 | Authentication and authorization | Complete |
 | 03 | Archive management | Not started |
 | 04 | Image upload | Not started |
 | 05 | Moderation | Not started |

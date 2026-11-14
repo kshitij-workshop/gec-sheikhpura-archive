@@ -13,7 +13,19 @@ Phase 00 implements a minimal security baseline:
 
 Phase 01 adds database-level security invariants: `GUEST` cannot be persisted as a role, approved photos require an album from the same event, public visibility requires approved photos in published non-deleted albums and events, and moderation/audit history is append-only at the database level.
 
-Authentication, cookie-based sessions, CSRF protection, upload authorization, and full RBAC are implemented in later phases. This document records both the implemented baseline and the required target design.
+Phase 02 implements authentication and authorization:
+
+- Registration with email verification and BCrypt password hashing (strength 12).
+- Short-lived HS256 access tokens and rotating, hashed, opaque refresh tokens in `HttpOnly` cookies.
+- CSRF protection and `Origin` validation for cookie-authenticated endpoints.
+- Password reset with single-use hashed tokens and session revocation.
+- Deny-by-default route rules for `USER`, `ADMIN`, and `SUPER_ADMIN`.
+- SUPER_ADMIN role and status management with self-change and last-super-admin protection.
+- Environment-driven first SUPER_ADMIN bootstrap with forced password change.
+- Append-only audit records for registration, verification, password changes, and role/status changes.
+- Per-IP and per-account rate limiting for authentication endpoints.
+
+Uploads, Cloudinary verification, moderation workflows, and the remaining RBAC operations are implemented in later phases. This document records both the implemented baseline and the required target design.
 
 ## 2. Security principles
 
@@ -83,10 +95,11 @@ Additional rules:
 
 ### 5.1 Passwords
 
-- Hash with Argon2id where operationally supported, otherwise BCrypt with a strong work factor.
-- Never log or return password hashes.
-- Enforce a minimum password policy with a breached-password check where feasible.
-- Rate-limit login and password-reset attempts.
+- BCrypt with work factor 12 is implemented. Argon2id was considered but requires an additional dependency and is deferred until a concrete operational need appears.
+- Password policy: 12–128 characters, at least one letter and one digit, no single repeated character, no common password, and not equal to the email address or display name.
+- Passwords are never logged, returned, or written to audit records.
+- A breached-password service check remains a later hardening option.
+- Login, registration, and password-reset attempts are rate-limited.
 
 ### 5.2 Access tokens
 
@@ -136,6 +149,25 @@ Only `ACTIVE` accounts may authenticate and exercise role permissions.
 - Force a password change after bootstrap.
 - Record the bootstrap event in the audit log.
 
+### 5.7 Implemented Phase 02 parameters
+
+| Concern | Implemented value |
+|---|---|
+| Access token | HS256 JWT, 15-minute TTL, claims `sub`, `role`, `jti`, `iss`, `iat`, `exp` |
+| JWT secret | `APP_JWT_SECRET`, minimum 32 bytes, fails startup when missing or short |
+| Refresh token | 32 random bytes, base64url, SHA-256 hash at rest |
+| Refresh expiry | idle 7 days, absolute family lifetime 30 days |
+| Refresh cookie | `HttpOnly`, `SameSite=Lax`, `Secure` (configurable), `Path=/api/v1/auth`, no `Domain` |
+| Refresh rotation | every successful refresh; reuse of a rotated token revokes the whole family in a `REQUIRES_NEW` transaction |
+| Password hashing | BCrypt strength 12 |
+| Verification token | 24-hour TTL, single-use, previous token invalidated on reissue |
+| Reset token | 1-hour TTL, single-use, previous token invalidated on reissue |
+| Session revocation | logout, password change, password reset, suspension, deactivation, and role change |
+| Bootstrap | `APP_BOOTSTRAP_SUPER_ADMIN_EMAIL` / `_PASSWORD`; skipped when an active SUPER_ADMIN exists; sets `password_change_required=true`; audited |
+| Principal loading | user, role, and status re-read from PostgreSQL on every authenticated request |
+
+Password hashes, refresh tokens, and email/reset tokens are never logged or returned by the API.
+
 ## 6. CSRF and CORS
 
 ### CSRF
@@ -145,7 +177,13 @@ Only `ACTIVE` accounts may authenticate and exercise role permissions.
 - Validate `Origin` and `Referer` for state-changing requests.
 - Access-token requests using `Authorization` are not cookie-authenticated, but refresh, logout, and any future cookie-authenticated endpoints must be protected.
 
-**Phase 00 note:** CSRF is disabled because no cookie authentication exists yet and all non-public endpoints are denied. It must be enabled in Phase 02 before any cookie-based endpoint is introduced.
+**Phase 02 implementation:**
+
+- `CookieCsrfTokenRepository` issues a readable `XSRF-TOKEN` cookie and accepts the `X-XSRF-TOKEN` header.
+- CSRF is enforced for `/api/v1/auth/refresh` and `/api/v1/auth/logout` and for cookie-authenticated state-changing requests.
+- CSRF is ignored only for the unauthenticated auth flows: register, verify-email, resend-verification, login, forgot-password, and reset-password.
+- An `OriginValidationFilter` rejects state-changing `/api/**` requests whose `Origin` is present but not in the CORS allowlist.
+- CORS allows credentials only for explicit configured origins.
 
 ### CORS
 
@@ -233,6 +271,8 @@ Apply limits to:
 
 Use per-account and per-IP limits. Avoid account-lockout designs that let an attacker deny service to a known account. Return `429` with `Retry-After`. Document the single-instance limitation if an in-memory limiter is used.
 
+**Phase 02 implementation:** a fixed-window in-memory limiter protects login (per IP and per account), registration and resend-verification (per IP), forgot-password (per account and per IP), and reset-password (per IP). Counters live in the JVM, so the limit applies per backend instance. A multi-instance deployment must replace it with a shared counter store before scaling out; this is an accepted Phase 02 limitation.
+
 ## 11. Audit logging
 
 Audit at least:
@@ -279,21 +319,27 @@ Audit records are append-only and must not contain passwords, tokens, or secrets
 
 ## 15. Security test checklist
 
-- Guest cannot access private submissions.
-- User cannot access another user's submissions.
-- User cannot approve, reject, hide, or remove photographs.
-- Admin cannot promote themselves to super admin.
-- Admin cannot demote the last super admin.
-- Rejected photographs never appear in public APIs.
-- Hidden and removed photographs never appear publicly.
-- Public endpoints do not expose private metadata or uploader details.
-- Unverified Cloudinary assets cannot become photo records.
-- A verified asset cannot be attached twice.
-- Refresh-token reuse revokes the token family.
-- Cookie-authenticated endpoints reject requests without a valid CSRF token.
-- Rate limits apply to login and upload authorization.
-- Validation rejects oversized, unsupported, and malformed input.
-- Error responses do not leak stack traces or secrets.
+Phase 02 covers the authentication and authorization items below with automated tests. Domain-specific items are marked for their implementing phase.
+
+- Guest cannot access private submissions. (Phase 04)
+- User cannot access another user's submissions. (Phase 04)
+- User cannot approve, reject, hide, or remove photographs. (Phase 05)
+- Admin cannot promote themselves to super admin. ✅ `AuthorizationIT`
+- Admin cannot demote the last super admin. ✅ `AuthorizationIT`
+- User cannot reach admin endpoints. ✅ `AuthorizationIT`
+- Rejected photographs never appear in public APIs. (Phase 05)
+- Hidden and removed photographs never appear publicly. (Phase 05)
+- Public endpoints do not expose private metadata or uploader details. (Phase 03)
+- Unverified Cloudinary assets cannot become photo records. (Phase 04)
+- A verified asset cannot be attached twice. (Phase 04)
+- Refresh-token reuse revokes the token family. ✅ `RefreshSessionIT`
+- Cookie-authenticated endpoints reject requests without a valid CSRF token. ✅ `RefreshSessionIT`
+- Password reset revokes active sessions. ✅ `PasswordResetIT`
+- Suspension takes effect on an existing access token. ✅ `AuthLoginIT`
+- Forced password change blocks other endpoints. ✅ `PasswordChangeRequiredIT`
+- Rate limits apply to login and upload authorization. ✅ login in `RateLimitIT`; uploads in Phase 04
+- Validation rejects oversized, unsupported, and malformed input. ✅ auth DTOs
+- Error responses do not leak stack traces or secrets. ✅ problem-detail handlers
 
 ## 16. Incident response
 

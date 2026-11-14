@@ -2,7 +2,9 @@
 
 ## 1. Status
 
-Phase 01 adds the database schema, entities, repositories, and shared pagination DTO. It does not expose domain endpoints yet; those are implemented in Phases 02–05. This document defines the conventions that all endpoints must follow.
+Phase 00 established the API conventions. Phase 01 added the database schema, entities, repositories, and shared pagination DTO. Phase 02 implements authentication, account management, and the authorization boundary. Domain endpoints for events, albums, photos, moderation, and reports are implemented in later phases.
+
+This document records implemented contracts and the conventions that later endpoints must follow.
 
 ## 2. Base URL
 
@@ -77,13 +79,88 @@ Rules:
 
 ## 7. Authentication
 
-- Protected endpoints require `Authorization: Bearer <access-token>`.
-- Access tokens are short-lived and kept in memory by the frontend.
-- Refresh tokens are delivered in secure `HttpOnly` cookies.
-- Cookie-authenticated state-changing endpoints require CSRF protection.
-- Public endpoints must never require or leak private credentials.
+### 7.1 Token model
 
-The authentication endpoints are finalized in Phase 02.
+- Protected endpoints require `Authorization: Bearer <access-token>`.
+- Access tokens are HS256 JWTs with a 15-minute lifetime and the claims `sub`, `role`, `jti`, `iss`, `iat`, `exp`. The frontend keeps them in memory only.
+- Refresh tokens are opaque 256-bit values stored only as SHA-256 hashes. The raw value is delivered in a `HttpOnly`, `SameSite=Lax` cookie scoped to `/api/v1/auth` and rotated on every refresh.
+- Cookie-authenticated state-changing endpoints (`/auth/refresh`, `/auth/logout`) require the `X-XSRF-TOKEN` header matching the readable `XSRF-TOKEN` cookie.
+- `GET /api/v1/auth/csrf` issues the CSRF cookie and returns the token plus header name.
+- Every authenticated request reloads the user from PostgreSQL, so suspension and role changes take effect before the access token expires.
+- Never expose password hashes, refresh tokens, verification tokens, or reset tokens in responses or logs.
+
+### 7.2 Endpoints
+
+All paths are relative to `/api/v1`.
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/auth/csrf` | Public | Issue CSRF cookie; returns `{ token, headerName }` |
+| `POST` | `/auth/register` | Public | Register a `PENDING_VERIFICATION` account |
+| `POST` | `/auth/verify-email` | Public | Consume a single-use verification token |
+| `POST` | `/auth/resend-verification` | Public | Reissue a verification email |
+| `POST` | `/auth/login` | Public | Issue an access token and refresh cookie |
+| `POST` | `/auth/refresh` | Refresh cookie + CSRF | Rotate refresh token and issue a new access token |
+| `POST` | `/auth/logout` | Refresh cookie + CSRF | Revoke the current token family and clear the cookie |
+| `POST` | `/auth/forgot-password` | Public | Send a password-reset email |
+| `POST` | `/auth/reset-password` | Public | Consume a reset token and revoke all sessions |
+| `GET` | `/me` | Bearer | Current profile |
+| `PATCH` | `/me` | Bearer + CSRF | Update display name |
+| `PATCH` | `/me/password` | Bearer + CSRF | Change password; revokes all sessions |
+| `GET` | `/admin/users` | `ADMIN`/`SUPER_ADMIN` | Paginated user directory |
+| `PATCH` | `/admin/users/{id}/status` | `ADMIN`/`SUPER_ADMIN` | Suspend, deactivate, or reactivate |
+| `PATCH` | `/admin/users/{id}/role` | `SUPER_ADMIN` | Change a user's role |
+
+CSRF is not required for `register`, `verify-email`, `resend-verification`, `login`, `forgot-password`, or `reset-password`, because those requests do not authenticate with a cookie.
+
+### 7.3 Request and response shapes
+
+Register:
+
+```json
+{ "email": "student@example.com", "password": "ArchivePass1234", "displayName": "Student Name" }
+```
+
+Login and refresh response:
+
+```json
+{
+  "accessToken": "<jwt>",
+  "tokenType": "Bearer",
+  "expiresIn": 900,
+  "user": {
+    "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+    "email": "student@example.com",
+    "displayName": "Student Name",
+    "role": "USER",
+    "status": "ACTIVE",
+    "emailVerifiedAt": "2026-11-14T10:15:30Z",
+    "createdAt": "2026-11-14T10:00:00Z",
+    "passwordChangeRequired": false
+  }
+}
+```
+
+| Endpoint | Success | Notes |
+|---|---|---|
+| `POST /auth/register` | `202` `{ "message": ... }` | Generic response; never reveals whether the email exists |
+| `POST /auth/verify-email` | `204` | Invalid, used, or expired token returns `400` |
+| `POST /auth/resend-verification` | `202` | Generic response |
+| `POST /auth/forgot-password` | `202` | Generic response |
+| `POST /auth/reset-password` | `204` | Revokes all refresh sessions |
+| `POST /auth/logout` | `204` | Clears the refresh cookie |
+| `PATCH /me/password` | `204` | Clears the refresh cookie after revocation |
+
+Error behaviour:
+
+- Invalid credentials, inactive accounts, and invalid refresh tokens return `401` with `WWW-Authenticate: Bearer`.
+- Missing, invalid, or reused CSRF tokens on cookie endpoints return `403`.
+- Requests from a disallowed `Origin` on `/api/**` return `403`.
+- `ADMIN` attempts to change roles return `403`; `GUEST` role persistence returns `400`.
+- Changing your own role or status returns `403`.
+- Demoting or deactivating the last active `SUPER_ADMIN` returns `403`.
+- Accounts with `passwordChangeRequired=true` may only call `GET /me`, `PATCH /me/password`, `GET /auth/csrf`, `POST /auth/refresh`, and `POST /auth/logout` until the password is changed; other endpoints return `403`.
+- Authentication rate limits return `429` with `Retry-After`.
 
 ## 8. Pagination, sorting, and filtering
 
@@ -102,11 +179,11 @@ Rules:
 - Use explicit filter parameters; do not expose arbitrary query languages.
 - Public list endpoints return only published, approved, non-deleted content.
 
-## 9. Planned endpoint groups
+## 9. Endpoint roadmap
 
-These are contract placeholders, not implemented endpoints. Exact paths and DTOs are finalized before frontend integration.
+Public domain endpoints and the remaining user/admin workflows are contract placeholders, not implemented endpoints. Implemented authentication, account, and role-management contracts are documented in section 7.
 
-### Public
+### Public (Phase 03)
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -119,48 +196,39 @@ These are contract placeholders, not implemented endpoints. Exact paths and DTOs
 | `GET` | `/api/v1/contributors` | Public contributor directory |
 | `GET` | `/api/v1/search` | Archive search |
 
-### Authentication
+### User (Phase 04–05)
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/api/v1/auth/register` | Register |
-| `POST` | `/api/v1/auth/verify-email` | Verify email |
-| `POST` | `/api/v1/auth/login` | Login |
-| `POST` | `/api/v1/auth/refresh` | Rotate refresh token and issue access token |
-| `POST` | `/api/v1/auth/logout` | Revoke current session |
-| `POST` | `/api/v1/auth/forgot-password` | Request password reset |
-| `POST` | `/api/v1/auth/reset-password` | Complete password reset |
+| Method | Path | Status | Purpose |
+|---|---|---|---|
+| `GET` | `/api/v1/me` | Implemented | Current profile |
+| `PATCH` | `/api/v1/me` | Implemented | Update profile |
+| `GET` | `/api/v1/me/photos` | Planned | Own submissions |
+| `POST` | `/api/v1/me/submissions` | Planned | Create submission batch |
+| `POST` | `/api/v1/me/uploads/authorize` | Planned | Request signed Cloudinary upload |
+| `POST` | `/api/v1/me/submissions/{id}/photos` | Planned | Register verified uploaded asset |
+| `POST` | `/api/v1/me/event-suggestions` | Planned | Suggest an event |
+| `POST` | `/api/v1/me/photos/{id}/removal-request` | Planned | Request removal |
+| `POST` | `/api/v1/photos/{id}/reports` | Planned | Report a photograph |
 
-### User
+### Admin (Phase 02 and Phase 05–06)
 
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/v1/me` | Current profile |
-| `PATCH` | `/api/v1/me` | Update profile |
-| `GET` | `/api/v1/me/photos` | Own submissions |
-| `POST` | `/api/v1/me/submissions` | Create submission batch |
-| `POST` | `/api/v1/me/uploads/authorize` | Request signed Cloudinary upload |
-| `POST` | `/api/v1/me/submissions/{id}/photos` | Register verified uploaded asset |
-| `POST` | `/api/v1/me/event-suggestions` | Suggest an event |
-| `POST` | `/api/v1/me/photos/{id}/removal-request` | Request removal |
-| `POST` | `/api/v1/photos/{id}/reports` | Report a photograph |
-
-### Admin
-
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/v1/admin/moderation/photos` | Moderation queue |
-| `POST` | `/api/v1/admin/photos/{id}/approve` | Approve |
-| `POST` | `/api/v1/admin/photos/{id}/reject` | Reject with reason |
-| `POST` | `/api/v1/admin/photos/{id}/flag` | Flag |
-| `POST` | `/api/v1/admin/photos/{id}/hide` | Hide |
-| `POST` | `/api/v1/admin/photos/{id}/remove` | Remove |
-| `GET` | `/api/v1/admin/reports` | Reports |
-| `PATCH` | `/api/v1/admin/reports/{id}` | Resolve or dismiss |
-| `GET` | `/api/v1/admin/event-suggestions` | Event suggestions |
-| `PATCH` | `/api/v1/admin/event-suggestions/{id}` | Review suggestion |
-| `GET` | `/api/v1/admin/audit-logs` | Audit history |
-| `GET` | `/api/v1/admin/analytics` | Administrative analytics |
+| Method | Path | Status | Purpose |
+|---|---|---|---|
+| `GET` | `/api/v1/admin/users` | Implemented | User directory |
+| `PATCH` | `/api/v1/admin/users/{id}/status` | Implemented | Suspend or reactivate |
+| `PATCH` | `/api/v1/admin/users/{id}/role` | Implemented (`SUPER_ADMIN`) | Change a role |
+| `GET` | `/api/v1/admin/moderation/photos` | Planned | Moderation queue |
+| `POST` | `/api/v1/admin/photos/{id}/approve` | Planned | Approve |
+| `POST` | `/api/v1/admin/photos/{id}/reject` | Planned | Reject with reason |
+| `POST` | `/api/v1/admin/photos/{id}/flag` | Planned | Flag |
+| `POST` | `/api/v1/admin/photos/{id}/hide` | Planned | Hide |
+| `POST` | `/api/v1/admin/photos/{id}/remove` | Planned | Remove |
+| `GET` | `/api/v1/admin/reports` | Planned | Reports |
+| `PATCH` | `/api/v1/admin/reports/{id}` | Planned | Resolve or dismiss |
+| `GET` | `/api/v1/admin/event-suggestions` | Planned | Event suggestions |
+| `PATCH` | `/api/v1/admin/event-suggestions/{id}` | Planned | Review suggestion |
+| `GET` | `/api/v1/admin/audit-logs` | Planned | Audit history |
+| `GET` | `/api/v1/admin/analytics` | Planned | Administrative analytics |
 
 ## 10. Operational endpoints
 
