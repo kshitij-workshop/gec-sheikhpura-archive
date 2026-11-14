@@ -14,4 +14,5 @@ public interface PhotoSubmissionRepository extends JpaRepository<PhotoSubmission
     Page<PhotoSubmission> findBySubmittedBy_IdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
     Page<PhotoSubmission> findByStatusOrderByCreatedAtAsc(SubmissionStatus status, Pageable pageable);
+
 }

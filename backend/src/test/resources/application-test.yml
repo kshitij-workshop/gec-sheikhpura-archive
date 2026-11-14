@@ -28,3 +28,17 @@ app:
       forgot-password-per-account: 1000
       forgot-password-per-ip: 1000
       reset-password-per-ip: 1000
+  upload:
+    max-file-size-bytes: 15728640
+    max-photos-per-submission: 50
+    authorization-ttl: 10m
+    authorize-per-user-per-hour: 1000
+    authorize-per-ip-per-hour: 1000
+    rate-limit-window: 1h
+  cloudinary:
+    cloud-name: test-cloud
+    api-key: test-key
+    api-secret: test-secret
+    upload-preset: test-preset
+    folder: gecs-test
+    secure-delivery: true

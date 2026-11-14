@@ -22,6 +22,12 @@ public interface PhotoRepository extends JpaRepository<Photo, UUID> {
 
     Page<Photo> findByUploadedBy_IdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
+    long countBySubmission_Id(UUID submissionId);
+
+    boolean existsByCloudinaryPublicId(String publicId);
+
+    boolean existsByCloudinaryAssetId(String assetId);
+
     @Query("""
             select photo
             from Photo photo

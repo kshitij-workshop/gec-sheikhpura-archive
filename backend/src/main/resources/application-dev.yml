@@ -23,6 +23,8 @@ app:
       secret: ${APP_JWT_SECRET:dev-only-jwt-secret-change-before-production-32-bytes}
     refresh-token:
       cookie-secure: ${APP_REFRESH_COOKIE_SECURE:false}
+  cloudinary:
+    secure-delivery: ${CLOUDINARY_SECURE_DELIVERY:true}
 
 logging:
   level:

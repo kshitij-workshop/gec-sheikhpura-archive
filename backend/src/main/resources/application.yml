@@ -98,6 +98,20 @@ app:
       forgot-password-window: ${APP_RATE_LIMIT_FORGOT_WINDOW:1h}
       reset-password-per-ip: ${APP_RATE_LIMIT_RESET_PER_IP:5}
       reset-password-window: ${APP_RATE_LIMIT_RESET_WINDOW:1h}
+  upload:
+    max-file-size-bytes: ${APP_UPLOAD_MAX_FILE_SIZE_BYTES:15728640}
+    max-photos-per-submission: ${APP_UPLOAD_MAX_PHOTOS_PER_SUBMISSION:50}
+    authorization-ttl: ${APP_UPLOAD_AUTHORIZATION_TTL:10m}
+    authorize-per-user-per-hour: ${APP_UPLOAD_AUTHORIZE_PER_USER_PER_HOUR:20}
+    authorize-per-ip-per-hour: ${APP_UPLOAD_AUTHORIZE_PER_IP_PER_HOUR:40}
+    rate-limit-window: ${APP_UPLOAD_RATE_LIMIT_WINDOW:1h}
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+    api-key: ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
+    upload-preset: ${CLOUDINARY_UPLOAD_PRESET:}
+    folder: ${CLOUDINARY_UPLOAD_FOLDER:gecs-archive}
+    secure-delivery: ${CLOUDINARY_SECURE_DELIVERY:true}
 
 logging:
   level:

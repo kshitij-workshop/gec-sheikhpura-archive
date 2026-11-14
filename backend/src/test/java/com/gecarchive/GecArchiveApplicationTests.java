@@ -27,8 +27,8 @@ class GecArchiveApplicationTests extends AbstractIntegrationTest {
                 "select metadata_value from app_metadata where metadata_key = 'schema_phase'",
                 String.class);
 
-        assertThat(appliedMigrations).isGreaterThanOrEqualTo(3);
+        assertThat(appliedMigrations).isGreaterThanOrEqualTo(4);
         assertThat(metadataRows).isEqualTo(1);
-        assertThat(schemaPhase).isEqualTo("phase-02");
+        assertThat(schemaPhase).isEqualTo("phase-04");
     }
 }
