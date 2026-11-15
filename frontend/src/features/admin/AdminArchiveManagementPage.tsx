@@ -15,7 +15,31 @@ export default function AdminArchiveManagementPage() {
   const [album, setAlbum] = useState({ eventId: '', title: '' })
   const [notice, setNotice] = useState<string | null>(null)
   const save = useMutation({ mutationFn: async (input: { type: string; body: unknown }) => { if (input.type === 'year') return createAdminYear(input.body); if (input.type === 'category') return createAdminCategory(input.body); if (input.type === 'album') return createAdminAlbum(input.body); return createAdminEvent(input.body) }, onSuccess: (_data, input) => { setNotice(`${input.type[0]!.toUpperCase()}${input.type.slice(1)} created.`); void client.invalidateQueries({ queryKey: ['admin'] }) } })
-  const togglePublish = useMutation({ mutationFn: (input: { id: string; published: boolean }) => updateAdminEvent(input.id, { ...events.data?.items.find((item) => item.id === input.id), published: input.published }), onSuccess: () => { void client.invalidateQueries({ queryKey: ['admin', 'events'] }) } })
+  const togglePublish = useMutation({
+    mutationFn: (input: { id: string; published: boolean }) => {
+      const current = events.data?.items.find((item) => item.id === input.id)
+      if (!current) {
+        throw new Error('The event is no longer available. Refresh and try again.')
+      }
+
+      // EventResponse is a read model with nested academicYear/category
+      // objects. EventRequest is a write model and requires their IDs.
+      return updateAdminEvent(input.id, {
+        academicYearId: current.academicYear.id,
+        categoryId: current.category.id,
+        title: current.title,
+        slug: current.slug,
+        description: current.description,
+        eventDate: current.eventDate,
+        location: current.location,
+        published: input.published,
+        featured: current.featured,
+      })
+    },
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['admin', 'events'] })
+    },
+  })
   return <div className="space-y-6"><PageHeader eyebrow="Administration" title="Archive management" description="Maintain academic years, categories, events, and albums." />
     {notice ? <Alert tone="success" title="Archive updated">{notice}</Alert> : null}{save.isError ? <Alert tone="danger" title="Could not save">{requestFailureMessage(save.error, 'Check the fields and try again.')}</Alert> : null}
     <div className="grid gap-6 lg:grid-cols-3">
