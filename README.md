@@ -4,7 +4,7 @@ A community-driven digital photography archive for Government Engineering Colleg
 
 The archive preserves college events, photographs, albums, and contributor credits in one public, moderated platform. Registered contributors submit photographs; administrators review submissions before publication.
 
-> **Status:** Phase 05 — the backend is feature-complete. Moderation queue and state transitions, user reporting, removal requests, event suggestions, administrative audit-log reads, and analytics are implemented and tested, completing every planned API endpoint. Next: frontend phases.
+> **Status:** Phase 06 — the frontend foundation is complete: design tokens, shared UI primitives, application shell and navigation, a session-aware API client, and guarded routing. Public pages and dashboards arrive in Phases 07–09.
 
 ## Product principles
 
@@ -235,6 +235,7 @@ Verification and reset emails are delivered to Mailpit locally at http://localho
 - [`docs/DATABASE.md`](docs/DATABASE.md) — database conventions and integrity rules
 - [`docs/API.md`](docs/API.md) — API conventions and contracts
 - [`docs/SECURITY.md`](docs/SECURITY.md) — authentication, authorization, upload, privacy rules
+- [`docs/FRONTEND.md`](docs/FRONTEND.md) — design system, routing, session handling, frontend testing
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — environments and deployment
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — architecture decision records
 - [`AGENTS.md`](AGENTS.md) — engineering workflow and agent rules
@@ -249,7 +250,7 @@ Verification and reset emails are delivered to Mailpit locally at http://localho
 | 03 | Archive management | Complete |
 | 04 | Image upload | Complete |
 | 05 | Moderation | Complete |
-| 06 | Frontend foundation | Not started |
+| 06 | Frontend foundation | Complete |
 | 07 | Public website | Not started |
 | 08 | User dashboard | Not started |
 | 09 | Admin dashboard | Not started |

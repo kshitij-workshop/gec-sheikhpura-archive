@@ -32,6 +32,7 @@ Each record contains:
 | ADR-0017 | Archive lifecycle and public visibility boundary | Accepted |
 | ADR-0018 | Server-bound signed Cloudinary uploads and trusted verification | Accepted |
 | ADR-0019 | Moderation transition table and derived submission status | Accepted |
+| ADR-0020 | In-memory SPA sessions with single-flight refresh and route guards | Accepted |
 
 ---
 
@@ -570,3 +571,32 @@ Phase 05 activates the moderation schema defined in V2. Moderation must be predi
 - Submission status stays consistent with what a reviewer actually sees in the queue.
 - Removal requested by a user and removal performed by an admin produce identical history and audit records.
 - Restoring always returns a photograph to `PENDING`, so previously approved content is re-reviewed before publication.
+
+---
+
+## ADR-0020 — In-memory SPA sessions with single-flight refresh and route guards
+
+**Status:** Accepted
+
+### Context
+
+Phase 06 connects the SPA to the Phase 02 session contract. The access token must not be readable by injected scripts after the tab closes, refresh cookies are `HttpOnly`, cookie-authenticated endpoints require CSRF, and several queries can fail with `401` at the same time after a token expires. Guards also need to make protected routes usable without pretending the frontend is a security boundary.
+
+### Decision
+
+- Keep the access token only in a module-level variable inside `lib/api/client.ts`; never write it to `localStorage`, `sessionStorage`, or a readable cookie.
+- Restore sessions on mount by requesting a CSRF pair and posting it to `/auth/refresh`; anonymous visitors fall back to the public shell.
+- Cache the CSRF token and header name in memory, and attach them only to cookie-authenticated calls (refresh and logout); bearer requests remain exempt.
+- Serialize concurrent refreshes through one shared promise so a page with several failing queries rotates the refresh cookie once.
+- Retry an authenticated request at most once after a successful refresh. Public auth calls and callers that disable retry never trigger a refresh.
+- Surface failures as `ApiError` carrying the status and RFC 9457 `ProblemDetail` payload.
+- Treat route guards as usability only: `RequireAuth` preserves the target in router state, `RequireRole` redirects mismatched roles to `/forbidden`, and the API re-authorizes every request.
+- Code-split pages with `React.lazy`, keep shared design tokens in `styles/global.css`, and keep reusable primitives in `components/ui`.
+
+### Consequences
+
+- Refreshing the browser costs one CSRF request plus one refresh request before the session is known; the shell shows a loading state during that window.
+- Token expiry is transparent to callers and does not produce a refresh storm.
+- XSS remains able to read an active in-memory token, but the token is never persisted and the refresh cookie stays out of JavaScript's reach.
+- A tampered client can reveal placeholder admin UI, but every mutation and read still fails with `401`/`403` at the API.
+- Route-level code splitting keeps dashboard and admin bundles out of the initial load.

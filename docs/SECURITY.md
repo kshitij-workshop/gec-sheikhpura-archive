@@ -197,6 +197,15 @@ Only `ACTIVE` accounts may authenticate and exercise role permissions.
 
 Password hashes, refresh tokens, and email/reset tokens are never logged or returned by the API.
 
+### 5.8 Frontend session handling
+
+- The access token lives in a module-level variable in `frontend/src/lib/api/client.ts`; it is never written to `localStorage` or `sessionStorage`.
+- The refresh cookie is `HttpOnly`; the SPA asks for a CSRF pair and posts it to `/auth/refresh` to restore a session.
+- CSRF pairs are cached in memory and attached only to cookie-authenticated calls; bearer requests are exempt.
+- Concurrent `401` responses share one refresh request, and an authenticated request is retried at most once.
+- Route guards are usability only. The API authorizes every request, and a modified client cannot widen its permissions.
+- See `docs/FRONTEND.md` and ADR-0020.
+
 ## 6. CSRF and CORS
 
 ### CSRF

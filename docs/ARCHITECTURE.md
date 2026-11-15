@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 00 establishes the repository, local infrastructure, backend, frontend, and verification pipelines. Phase 01 adds the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication and authorization. Phase 03 adds archive management and public read APIs. Phase 04 adds signed Cloudinary uploads, server-side asset verification, submission tracking, photographer credits, and expired-upload cleanup. Phase 05 adds the moderation state machine, user reporting, removal requests, event-suggestion review, administrative audit-log reads, and analytics.
+Phase 00 establishes the repository, local infrastructure, backend, frontend, and verification pipelines. Phase 01 adds the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication and authorization. Phase 03 adds archive management and public read APIs. Phase 04 adds signed Cloudinary uploads, server-side asset verification, submission tracking, photographer credits, and expired-upload cleanup. Phase 05 adds the moderation state machine, user reporting, removal requests, event-suggestion review, administrative audit-log reads, and analytics. Phase 06 adds the frontend design system, application shell, session-aware API client, guarded routing, and shared UI primitives.
 
 ## 2. Architectural style
 
@@ -71,19 +71,19 @@ Controllers handle HTTP concerns, validation, and authorization annotations. Ser
 
 ```text
 src/
-├── app/            application shell, router, providers
-├── components/     shared presentation components
-├── features/       feature folders such as archive, events, albums, photos, auth, contributions, admin
+├── app/            application shell, router, providers, route guards
+├── components/ui/  design-system primitives
+├── features/       feature folders such as auth, archive, contributions, admin
 ├── lib/            API client, configuration, utilities
 ├── styles/         global styles and design tokens
 └── test/           test setup and shared helpers
 ```
 
-Features own their components, hooks, schemas, and tests. Shared components remain generic and presentation-focused.
+Features own their components, hooks, schemas, and tests. Shared components remain generic and presentation-focused. Routes are code-split, and `docs/FRONTEND.md` documents the design tokens, navigation, guards, and session behavior.
 
 ## 6. Authentication and session model
 
-The proposed production model:
+The implemented model:
 
 - Access token: short-lived JWT, kept in memory only.
 - Refresh token: opaque random token, hashed at rest, rotated on use, delivered in a secure `HttpOnly` cookie.
@@ -92,7 +92,7 @@ The proposed production model:
 - Production uses a same-origin `/api` rewrite so refresh cookies remain first-party.
 - No long-lived secrets in `localStorage`.
 
-The full design is finalized in Phase 02 and recorded in `docs/DECISIONS.md`.
+The backend design is recorded in ADR-0013 and ADR-0014; the browser implementation is recorded in ADR-0020 and documented in `docs/FRONTEND.md`.
 
 ## 7. Upload flow
 
