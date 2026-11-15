@@ -107,6 +107,9 @@ Names are indicative and will be finalized as features are implemented.
 | `MAIL_PORT` | SMTP port |
 | `MAIL_USERNAME` | SMTP username |
 | `MAIL_PASSWORD` | SMTP password |
+| `BREVO_API_KEY` | Brevo HTTPS API key used by the production profile |
+| `MAIL_FROM` | Verified Brevo sender email |
+| `MAIL_FROM_NAME` | Sender display name |
 | `APP_PUBLIC_URL` | Public frontend URL for links |
 | `APP_CORS_ALLOWED_ORIGINS` | Allowed browser origins |
 

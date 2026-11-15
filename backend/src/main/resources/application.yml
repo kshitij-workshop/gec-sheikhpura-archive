@@ -6,9 +6,12 @@ spring:
     port: ${MAIL_PORT:1025}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
-    properties:
-      mail.smtp.auth: ${MAIL_SMTP_AUTH:false}
-      mail.smtp.starttls.enable: ${MAIL_SMTP_STARTTLS:false}
+  properties:
+    mail.smtp.auth: ${MAIL_SMTP_AUTH:false}
+    mail.smtp.starttls.enable: ${MAIL_SMTP_STARTTLS:false}
+    mail.smtp.connectiontimeout: ${MAIL_SMTP_CONNECTION_TIMEOUT:5000}
+    mail.smtp.timeout: ${MAIL_SMTP_READ_TIMEOUT:10000}
+    mail.smtp.writetimeout: ${MAIL_SMTP_WRITE_TIMEOUT:10000}
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -60,6 +63,9 @@ management:
   endpoint:
     health:
       show-details: never
+  health:
+    mail:
+      enabled: false
 
 springdoc:
   api-docs:
@@ -113,6 +119,10 @@ app:
     upload-preset: ${CLOUDINARY_UPLOAD_PRESET:}
     folder: ${CLOUDINARY_UPLOAD_FOLDER:gecs-archive}
     secure-delivery: ${CLOUDINARY_SECURE_DELIVERY:true}
+  mail:
+    api-key: ${BREVO_API_KEY:}
+    from: ${MAIL_FROM:}
+    from-name: ${MAIL_FROM_NAME:GEC Sheikhpura Archive}
 
 logging:
   level:

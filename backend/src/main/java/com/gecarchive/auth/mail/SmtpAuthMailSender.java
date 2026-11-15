@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
-@Profile("!test")
+@Profile("!test & !prod")
 public class SmtpAuthMailSender implements AuthMailSender {
 
     private static final Logger log = LoggerFactory.getLogger(SmtpAuthMailSender.class);

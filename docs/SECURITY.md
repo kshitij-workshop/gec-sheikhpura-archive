@@ -37,6 +37,7 @@ Phase 04 implements the upload boundary:
 - Only authenticated active users can create submissions or request upload authorization.
 - Upload authorizations are single-use, short-lived, bound to the submitting user and submission, and contain a server-generated Cloudinary public ID.
 - The Cloudinary API secret never leaves the backend.
+- Production authentication email delivery uses Brevo's HTTPS API over port 443 on Render Free; the Brevo API key remains backend-only and is never logged or returned to clients.
 - The returned Cloudinary asset is verified through the trusted Admin API before a photo row is created.
 - Resource type, delivery type, public ID, asset ID, format, dimensions, byte size, and creation time are validated server-side.
 - Only JPEG, PNG, and WebP assets up to 15 MB are accepted; each submission is limited to 50 photos.
