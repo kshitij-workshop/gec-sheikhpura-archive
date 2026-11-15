@@ -15,6 +15,7 @@ Thumbs.db
 !.env.example
 !**/.env.example
 !frontend/.env.production
+!frontend/.env.development
 **/.env.local
 **/*.pem
 **/*.key
