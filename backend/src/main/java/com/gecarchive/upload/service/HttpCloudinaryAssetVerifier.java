@@ -12,6 +12,8 @@ import com.gecarchive.upload.config.CloudinaryProperties;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriUtils;
@@ -58,9 +60,12 @@ public class HttpCloudinaryAssetVerifier implements CloudinaryAssetVerifier {
     @Override
     public void delete(String publicId) {
         requireConfiguration();
-        String encoded = UriUtils.encodePath(publicId, StandardCharsets.UTF_8);
-        restClient.delete().uri("/resources/image/upload/" + encoded)
-                .header(HttpHeaders.AUTHORIZATION, basicAuth()).retrieve().toBodilessEntity();
+        String encodedPublicId = UriUtils.encodeQueryParam(publicId, StandardCharsets.UTF_8);
+        restClient.method(HttpMethod.DELETE).uri("/resources/image/upload")
+                .header(HttpHeaders.AUTHORIZATION, basicAuth())
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body("public_ids[]=" + encodedPublicId)
+                .retrieve().toBodilessEntity();
     }
 
     private String basicAuth() {

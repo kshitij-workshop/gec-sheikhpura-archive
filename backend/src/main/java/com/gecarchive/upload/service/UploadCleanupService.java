@@ -31,7 +31,8 @@ public class UploadCleanupService {
             try {
                 cloudinary.delete(authorization.getPublicId());
             } catch (RuntimeException exception) {
-                log.warn("Unable to remove expired Cloudinary upload authorization asset; retrying later");
+                log.warn("Unable to remove expired Cloudinary upload authorization asset {}; retrying later",
+                        authorization.getPublicId(), exception);
                 continue;
             }
             authorizations.delete(authorization);
