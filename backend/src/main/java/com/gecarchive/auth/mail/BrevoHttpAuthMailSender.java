@@ -14,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -47,6 +48,7 @@ public class BrevoHttpAuthMailSender implements AuthMailSender {
     }
 
     @Override
+    @Async("mailTaskExecutor")
     public void sendVerificationEmail(User user, String token) {
         send(user, "Verify your GEC Sheikhpura Archive account", """
                 Hello %s,
@@ -59,6 +61,7 @@ public class BrevoHttpAuthMailSender implements AuthMailSender {
     }
 
     @Override
+    @Async("mailTaskExecutor")
     public void sendPasswordResetEmail(User user, String token) {
         send(user, "Reset your GEC Sheikhpura Archive password", """
                 Hello %s,
