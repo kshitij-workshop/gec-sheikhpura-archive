@@ -84,7 +84,8 @@ public class SecurityConfig {
                                 "/api/v1/events/**",
                                 "/api/v1/albums",
                                 "/api/v1/albums/**",
-                                "/api/v1/photos/**")
+                                "/api/v1/photos/**",
+                                "/api/v1/contributors")
                         .permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_AUTH_POSTS).permitAll()
                         .requestMatchers(HttpMethod.POST,

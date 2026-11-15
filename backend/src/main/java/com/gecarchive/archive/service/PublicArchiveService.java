@@ -1,6 +1,8 @@
 package com.gecarchive.archive.service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import com.gecarchive.album.entity.Album;
@@ -21,8 +23,11 @@ import com.gecarchive.photo.repository.PhotoRepository;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.criteria.Predicate;
 
 @Service
 public class PublicArchiveService {
@@ -53,12 +58,37 @@ public class PublicArchiveService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<EventResponse> events(int page, int size, String query) {
-        var pageable = PageRequest.of(Math.max(0, page), bounded(size), Sort.by("eventDate").descending());
-        var result = query == null || query.isBlank()
-                ? events.findByPublishedTrueAndDeletedAtIsNull(pageable)
-                : events.findByTitleContainingIgnoreCaseAndPublishedTrueAndDeletedAtIsNull(query.trim(), pageable);
+    public PageResponse<EventResponse> events(int page, int size, String query, UUID academicYearId, UUID categoryId,
+            Boolean featured) {
+        var pageable = PageRequest.of(Math.max(0, page), bounded(size),
+                Sort.by(Sort.Direction.DESC, "eventDate").and(Sort.by(Sort.Direction.ASC, "id")));
+        var result = events.findAll(publicEventSpecification(query, academicYearId, categoryId, featured), pageable);
         return PageResponse.from(result, event -> EventResponse.from(event, publicAlbums(event)));
+    }
+
+    private Specification<Event> publicEventSpecification(
+            String query, UUID academicYearId, UUID categoryId, Boolean featured) {
+        return (root, criteriaQuery, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isTrue(root.get("published")));
+            predicates.add(cb.isNull(root.get("deletedAt")));
+
+            if (query != null && !query.isBlank()) {
+                String pattern = "%" + query.trim().toLowerCase(Locale.ROOT) + "%";
+                predicates.add(cb.like(cb.lower(root.get("title")), pattern));
+            }
+            if (academicYearId != null) {
+                predicates.add(cb.equal(root.get("academicYear").get("id"), academicYearId));
+            }
+            if (categoryId != null) {
+                predicates.add(cb.equal(root.get("category").get("id"), categoryId));
+            }
+            if (featured != null) {
+                predicates.add(cb.equal(root.get("featured"), featured));
+            }
+
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
     }
 
     @Transactional(readOnly = true)

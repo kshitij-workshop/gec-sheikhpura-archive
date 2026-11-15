@@ -41,8 +41,11 @@ public class PublicArchiveController {
     public PageResponse<EventResponse> events(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "24") int size,
-            @RequestParam(required = false) String query) {
-        return archive.events(page, size, query);
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) UUID academicYearId,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) Boolean featured) {
+        return archive.events(page, size, query, academicYearId, categoryId, featured);
     }
 
     @GetMapping("/events/{id}")
