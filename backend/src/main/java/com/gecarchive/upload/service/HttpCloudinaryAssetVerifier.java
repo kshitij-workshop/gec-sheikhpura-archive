@@ -33,7 +33,10 @@ public class HttpCloudinaryAssetVerifier implements CloudinaryAssetVerifier {
     @Override
     public CloudinaryAsset verify(String publicId) {
         requireConfiguration();
-        String encoded = UriUtils.encodePathSegment(publicId, StandardCharsets.UTF_8);
+        // A Cloudinary public ID may contain folder separators. Encode each
+        // path component while preserving `/`; the Admin API uses those
+        // separators to address nested public IDs.
+        String encoded = UriUtils.encodePath(publicId, StandardCharsets.UTF_8);
         Map<String, Object> response = restClient.get()
                 .uri("/resources/image/upload/" + encoded)
                 .header(HttpHeaders.AUTHORIZATION, basicAuth())
@@ -55,7 +58,7 @@ public class HttpCloudinaryAssetVerifier implements CloudinaryAssetVerifier {
     @Override
     public void delete(String publicId) {
         requireConfiguration();
-        String encoded = UriUtils.encodePathSegment(publicId, StandardCharsets.UTF_8);
+        String encoded = UriUtils.encodePath(publicId, StandardCharsets.UTF_8);
         restClient.delete().uri("/resources/image/upload/" + encoded)
                 .header(HttpHeaders.AUTHORIZATION, basicAuth()).retrieve().toBodilessEntity();
     }
