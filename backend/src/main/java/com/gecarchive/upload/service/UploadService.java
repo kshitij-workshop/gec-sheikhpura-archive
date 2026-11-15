@@ -15,6 +15,7 @@ import com.gecarchive.common.error.ConflictException;
 import com.gecarchive.common.error.ResourceNotFoundException;
 import com.gecarchive.common.security.AuthenticatedUser;
 import com.gecarchive.common.security.ClientInfo;
+import com.gecarchive.common.text.Slugs;
 import com.gecarchive.event.entity.Event;
 import com.gecarchive.event.repository.EventRepository;
 import com.gecarchive.photo.entity.Photo;
@@ -216,6 +217,7 @@ public class UploadService {
         photo.setSizeBytes(asset.bytes());
         photo.setStatus(PhotoStatus.PENDING);
         photos.save(photo);
+        ensurePublicContributorProfile(photo.getUploadedBy());
 
         for (short order = 0; order < request.photographers().size(); order++) {
             PhotographerCreditRequest requestCredit = request.photographers().get(order);
@@ -267,6 +269,38 @@ public class UploadService {
 
     private User user(UUID id) { return users.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("User not found.")); }
+
+    /**
+     * A successful contribution makes the account eligible for the public
+     * contributor directory. This profile is deliberately not attached to any
+     * photographer credit: uploader and photographer remain separate concepts.
+     */
+    private void ensurePublicContributorProfile(User contributor) {
+        if (contributorProfiles.findByUser_Id(contributor.getId()).isPresent()) {
+            return;
+        }
+
+        String base = Slugs.normalize(contributor.getDisplayName());
+        if (base == null || base.isBlank()) {
+            base = "contributor";
+        }
+        String slug = base;
+        if (contributorProfiles.existsBySlug(slug)) {
+            slug = base + "-" + contributor.getId().toString().substring(0, 8);
+        }
+
+        ContributorProfile profile = new ContributorProfile();
+        profile.setUser(contributor);
+        profile.setCreatedBy(contributor);
+        profile.setDisplayName(contributor.getDisplayName());
+        profile.setSlug(slug);
+        profile.setPublished(true);
+        contributorProfiles.save(profile);
+
+        audit.record(contributor, "CONTRIBUTOR_PROFILE_CREATED", "CONTRIBUTOR_PROFILE", profile.getId(),
+                null, Map.of("displayName", profile.getDisplayName(), "slug", profile.getSlug()),
+                null);
+    }
 
     private void requireCloudinaryUploadConfiguration() {
         if (cloudinaryProperties.cloudName() == null || cloudinaryProperties.cloudName().isBlank()

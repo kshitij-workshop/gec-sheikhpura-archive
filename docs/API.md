@@ -212,6 +212,8 @@ Phase 03, Phase 04 and Phase 05 implement the archive, upload and governance end
 3. The client uploads bytes directly to Cloudinary; bytes never pass through the API.
 4. `POST /me/submissions/{id}/photos` accepts the authorization ID, returned public ID, display metadata, and at least one photographer credit. The server verifies the asset through Cloudinary before persisting a pending photo.
 
+After the first successful photo registration, the authenticated uploader receives a published contributor profile using their display name and a unique slug. This profile represents the community contributor/uploader and is not automatically attached to any photographer credit. The uploader must still explicitly name photographers for each photograph.
+
 Upload authorizations expire after 10 minutes, are single-use, are bound to the user and submission, and are limited to 50 photos per submission. Authorization requests are rate-limited per user and IP. Client-supplied asset IDs, dimensions, formats, and byte sizes are not trusted.
 
 ### Moderation flow

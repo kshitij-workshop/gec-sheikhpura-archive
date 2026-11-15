@@ -13,6 +13,8 @@ public interface ContributorProfileRepository extends JpaRepository<ContributorP
 
     Optional<ContributorProfile> findByUser_Id(UUID userId);
 
+    boolean existsBySlug(String slug);
+
     Page<ContributorProfile> findByPublishedTrueAndDeletedAtIsNull(Pageable pageable);
 
     long countByPublishedTrueAndDeletedAtIsNull();

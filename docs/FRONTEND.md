@@ -129,6 +129,7 @@ Public reads live in `lib/api/archiveApi.ts` and are issued with `auth: false`, 
 - The album page opens photographs in a native `<dialog>` viewer. Arrow keys move between photographs, Escape closes it, and Previous/Next buttons expose the same actions for pointer and assistive-technology users.
 - Photographs are delivered through Cloudinary. `lib/cloudinary.ts` builds `f_auto,q_auto` URLs from the public cloud name, with optional width, height, and `limit`/`fill` cropping. If the cloud name is missing, the UI renders an explicit placeholder rather than requesting an unknown cloud.
 - Attribution is always shown. Public photo payloads include ordered photographer credit names (never uploader identity), and every gallery image carries a visible credit line.
+- After a member successfully registers their first contribution, the API creates a public contributor profile from the account display name. The Contributors page then lists that profile; this does not infer that the member was the photographer.
 - The home page separates featured events, recent additions, and academic-year shortcuts. Missing content produces an honest empty state; an unreachable API produces a notice rather than fabricated cards.
 
 The sign-in form validates credentials in the browser, posts to `/auth/login`, and continues to the guard-recorded destination. It only accepts same-origin paths as a redirect target, and it returns the same message for an unknown email and a wrong password.
