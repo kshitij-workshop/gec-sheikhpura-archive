@@ -97,7 +97,11 @@ export function ModerationActionDialog({
     setAlbumError(undefined)
     mutation.mutate({
       reason: config.reasonRequired ? trimmed : null,
-      albumId: needsAlbum ? albumId : null,
+      // Preserve an existing album ID when approval does not need a new
+      // assignment. Sending null here would make the backend treat the photo
+      // as album-less even when the queue read model already carries one.
+      albumId:
+        action === 'approve' ? (needsAlbum ? albumId : photo.albumId) : null,
     })
   }
 
