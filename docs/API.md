@@ -201,7 +201,7 @@ Phase 03, Phase 04 and Phase 05 implement the archive, upload and governance end
 
 `GET /events` accepts `page` (default `0`), `size` (default `24`, clamped to `1–100`), and optional filters: case-insensitive `query` against the event title, `academicYearId`, `categoryId`, and `featured` (`true`/`false`). Filters combine conjunctively and only published, non-deleted events are returned; results are ordered by event date descending, then ID ascending. There is no separate archive search endpoint: title search is the `query` filter on `GET /events`, and album, category, and academic-year narrowing is done with the filters above.
 
-`GET /albums/{id}` accepts `page` and `size` for approved photo pagination. `GET /photos/{id}` returns a photo only when it satisfies the complete event/album/photo publication predicate. Public album photo results apply the same predicate.
+`GET /albums/{id}` accepts `page` and `size` for approved photo pagination. Each public photo exposes display metadata plus `cloudinaryPublicId`, `format`, and an ordered `photographers` list (`creditName`, `creditOrder`). No delivery URL, uploader identity, submission, or moderation metadata is exposed. `GET /photos/{id}` returns a photo only when it satisfies the complete event/album/photo publication predicate. Public album photo results apply the same predicate.
 
 `GET /contributors` returns a paginated directory of published, non-deleted contributor profiles ordered by display name ascending, then ID ascending. It accepts `page` (default `0`) and `size` (default `24`, clamped to `1–100`). Each item exposes only `id`, `displayName`, `slug`, and `bio`; account identifiers, email addresses, and unpublished or deleted profiles never cross this boundary.
 

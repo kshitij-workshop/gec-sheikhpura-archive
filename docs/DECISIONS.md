@@ -618,6 +618,7 @@ The PRD requires public visitors to search and filter the archive and to browse 
 - Evaluate filters through a JPA `Specification` that always includes `published = true` and `deleted_at IS NULL`, so visibility is structural rather than a caller responsibility. Combine supplied filters conjunctively, use case-insensitive `LIKE` for the title query, and sort by event date descending then ID ascending.
 - Do not add a generic `/api/v1/search` endpoint. Scoped search means narrowing continuous public listings; it does not introduce a cross-entity query language.
 - Add `GET /api/v1/contributors` with the same pagination bounds as other public listings, returning only published, non-deleted profiles ordered by display name.
+- Include ordered photographer credit names in public photo payloads so every published gallery can show attribution without exposing uploader identity, submission metadata, or moderation state.
 - Restrict the public contributor DTO to `id`, `displayName`, `slug`, and `bio`. Never expose account identity, email, or moderation state, and do not imply that a profile publication publishes any pending photograph.
 - Allow unauthenticated `GET` on `/api/v1/contributors` in `SecurityConfig`, matching the other public read paths.
 

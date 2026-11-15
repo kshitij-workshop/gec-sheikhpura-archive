@@ -3,7 +3,9 @@ package com.gecarchive.archive.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.gecarchive.album.entity.Album;
 import com.gecarchive.album.repository.AlbumRepository;
@@ -19,8 +21,12 @@ import com.gecarchive.event.entity.Event;
 import com.gecarchive.event.repository.AcademicYearRepository;
 import com.gecarchive.event.repository.CategoryRepository;
 import com.gecarchive.event.repository.EventRepository;
+import com.gecarchive.photo.entity.Photo;
+import com.gecarchive.photo.entity.PhotoPhotographer;
+import com.gecarchive.photo.repository.PhotoPhotographerRepository;
 import com.gecarchive.photo.repository.PhotoRepository;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -37,14 +43,17 @@ public class PublicArchiveService {
     private final EventRepository events;
     private final AlbumRepository albums;
     private final PhotoRepository photos;
+    private final PhotoPhotographerRepository photographers;
 
     public PublicArchiveService(AcademicYearRepository academicYears, CategoryRepository categories,
-            EventRepository events, AlbumRepository albums, PhotoRepository photos) {
+            EventRepository events, AlbumRepository albums, PhotoRepository photos,
+            PhotoPhotographerRepository photographers) {
         this.academicYears = academicYears;
         this.categories = categories;
         this.events = events;
         this.albums = albums;
         this.photos = photos;
+        this.photographers = photographers;
     }
 
     @Transactional(readOnly = true)
@@ -111,7 +120,7 @@ public class PublicArchiveService {
         if (!event.isPublished() || event.isDeleted()) throw new ResourceNotFoundException("Album not found.");
         var result = photos.findPublicByAlbumId(id, PageRequest.of(Math.max(0, page), bounded(size),
                 Sort.by("sortOrder").ascending().and(Sort.by("createdAt").ascending())));
-        return AlbumDetailResponse.from(album, eventResponse(event), PageResponse.from(result, PublicPhotoResponse::from));
+        return AlbumDetailResponse.from(album, eventResponse(event), publicPhotos(result));
     }
 
     @Transactional(readOnly = true)
@@ -123,8 +132,23 @@ public class PublicArchiveService {
 
     @Transactional(readOnly = true)
     public PublicPhotoResponse photo(UUID id) {
-        return photos.findPublicById(id).map(PublicPhotoResponse::from)
+        Photo photo = photos.findPublicById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Photo not found."));
+        return PublicPhotoResponse.from(photo, photographers.findByPhoto_IdOrderByCreditOrderAsc(id));
+    }
+
+    /**
+     * Adds photographer credits to a page of public photos with one batched
+     * query, so gallery pages do not issue a credit query per photograph.
+     */
+    private PageResponse<PublicPhotoResponse> publicPhotos(Page<Photo> page) {
+        List<UUID> photoIds = page.getContent().stream().map(Photo::getId).toList();
+        Map<UUID, List<PhotoPhotographer>> creditsByPhoto = photoIds.isEmpty()
+                ? Map.of()
+                : photographers.findByPhoto_IdInOrderByPhoto_IdAscCreditOrderAsc(photoIds).stream()
+                        .collect(Collectors.groupingBy(credit -> credit.getPhoto().getId()));
+        return PageResponse.from(page, photo -> PublicPhotoResponse.from(photo,
+                creditsByPhoto.getOrDefault(photo.getId(), List.of())));
     }
 
     private EventResponse eventResponse(Event event) {
