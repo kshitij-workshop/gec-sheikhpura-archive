@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Card, PageHeader, SelectField, Skeleton, TextField, TextAreaField } from '../../components/ui'
-import { createAdminAlbum, createAdminCategory, createAdminEvent, createAdminYear, listAdminCategories, listAdminEvents, listAdminYears, updateAdminEvent } from '../../lib/api/adminApi'
+import { createAdminAlbum, createAdminCategory, createAdminEvent, createAdminYear, listAdminAlbums, listAdminCategories, listAdminEvents, listAdminYears, updateAdminAlbum, updateAdminEvent } from '../../lib/api/adminApi'
 import { requestFailureMessage } from '../../lib/api/errorMessage'
 
 export default function AdminArchiveManagementPage() {
@@ -47,7 +47,36 @@ export default function AdminArchiveManagementPage() {
       <Card className="space-y-3 p-5"><h2 className="font-serif text-xl font-semibold">Categories</h2><TextField label="Name" id="category-name" value={category.name} onChange={(e) => setCategory({ ...category, name: e.target.value })} /><TextField label="Slug" id="category-slug" optional value={category.slug} onChange={(e) => setCategory({ ...category, slug: e.target.value })} /><TextAreaField label="Description" id="category-description" optional value={category.description} onChange={(e) => setCategory({ ...category, description: e.target.value })} /><Button type="button" isLoading={save.isPending} onClick={() => save.mutate({ type: 'category', body: { ...category, sortOrder: 0, active: true } })}>Add category</Button><ul className="space-y-1 text-sm text-archive-muted">{categories.data?.map((item) => <li key={item.id}>{item.name} {item.active ? '' : '(inactive)'}</li>)}</ul></Card>
       <Card className="space-y-3 p-5"><h2 className="font-serif text-xl font-semibold">Events</h2><TextField label="Title" id="event-title" value={event.title} onChange={(e) => setEvent({ ...event, title: e.target.value })} /><SelectField label="Academic year" id="event-year" value={event.academicYearId} onChange={(e) => setEvent({ ...event, academicYearId: e.target.value })}><option value="">Choose a year</option>{years.data?.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</SelectField><SelectField label="Category" id="event-category" value={event.categoryId} onChange={(e) => setEvent({ ...event, categoryId: e.target.value })}><option value="">Choose a category</option>{categories.data?.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectField><TextField label="Event date" id="event-date" type="date" value={event.eventDate} onChange={(e) => setEvent({ ...event, eventDate: e.target.value })} /><TextField label="Location" id="event-location" optional value={event.location} onChange={(e) => setEvent({ ...event, location: e.target.value })} /><Button type="button" isLoading={save.isPending} onClick={() => save.mutate({ type: 'event', body: { ...event, published: false, featured: false } })}>Add draft event</Button></Card>
     </div>
-    <Card className="space-y-3 p-5"><h2 className="font-serif text-xl font-semibold">Albums</h2><div className="grid gap-3 md:grid-cols-3"><SelectField label="Event" id="album-event" value={album.eventId} onChange={(e) => setAlbum({ ...album, eventId: e.target.value })}><option value="">Choose an event</option>{events.data?.items.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</SelectField><TextField label="Title" id="album-title" value={album.title} onChange={(e) => setAlbum({ ...album, title: e.target.value })} /><div className="flex items-end"><Button type="button" isLoading={save.isPending} onClick={() => save.mutate({ type: 'album', body: { ...album, published: false, sortOrder: 0 } })}>Add draft album</Button></div></div></Card>
+    <Card className="space-y-3 p-5"><h2 className="font-serif text-xl font-semibold">Albums</h2><div className="grid gap-3 md:grid-cols-3"><SelectField label="Event" id="album-event" value={album.eventId} onChange={(e) => setAlbum({ ...album, eventId: e.target.value })}><option value="">Choose an event</option>{events.data?.items.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</SelectField><TextField label="Title" id="album-title" value={album.title} onChange={(e) => setAlbum({ ...album, title: e.target.value })} /><div className="flex items-end"><Button type="button" isLoading={save.isPending} onClick={() => save.mutate({ type: 'album', body: { ...album, published: false, sortOrder: 0 } })}>Add draft album</Button></div></div>{events.data?.items.map((item) => <AlbumList key={item.id} eventId={item.id} />)}</Card>
     <Card className="space-y-3 p-5"><h2 className="font-serif text-xl font-semibold">Events and publication</h2>{events.isPending ? <Skeleton className="h-28 w-full" /> : <ul className="divide-y divide-archive-line">{events.data?.items.map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="font-medium">{item.title}</p><p className="text-sm text-archive-muted">{item.eventDate} · {item.published ? 'Published' : 'Draft'} · {item.albums.length} albums</p></div><Button type="button" size="sm" variant={item.published ? 'secondary' : 'primary'} isLoading={togglePublish.isPending} onClick={() => togglePublish.mutate({ id: item.id, published: !item.published })}>{item.published ? 'Unpublish' : 'Publish'}</Button></li>)}</ul>}</Card>
   </div>
+}
+
+function AlbumList({ eventId }: { eventId: string }) {
+  const client = useQueryClient()
+  const albums = useQuery({ queryKey: ['admin', 'albums', eventId], queryFn: () => listAdminAlbums(eventId) })
+  const publish = useMutation({
+    mutationFn: (album: { id: string; published: boolean }) => {
+      const current = albums.data?.find((item) => item.id === album.id)
+      if (!current) throw new Error('The album is no longer available. Refresh and try again.')
+      return updateAdminAlbum(album.id, {
+        eventId: current.eventId,
+        title: current.title,
+        slug: current.slug,
+        description: current.description,
+        published: album.published,
+        sortOrder: current.sortOrder,
+      })
+    },
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['admin', 'albums', eventId] })
+      void client.invalidateQueries({ queryKey: ['admin', 'events'] })
+    },
+  })
+
+  if (albums.isPending) return <Skeleton className="h-12 w-full" />
+  if (albums.isError) return <p className="border-t border-archive-line pt-3 text-sm text-archive-danger">Albums could not be loaded.</p>
+  if (albums.data.length === 0) return null
+
+  return <ul className="divide-y divide-archive-line border-t border-archive-line">{albums.data.map((album) => <li key={album.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="font-medium">{album.title}</p><p className="text-sm text-archive-muted">{album.published ? 'Published' : 'Draft'} · {album.slug}</p></div><Button type="button" size="sm" variant={album.published ? 'secondary' : 'primary'} isLoading={publish.isPending} onClick={() => publish.mutate({ id: album.id, published: !album.published })}>{album.published ? 'Unpublish album' : 'Publish album'}</Button></li>)}</ul>
 }
