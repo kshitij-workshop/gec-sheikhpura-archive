@@ -43,3 +43,81 @@ export interface PageResponse<T> {
   totalElements: number
   totalPages: number
 }
+
+export interface AcademicYear {
+  id: string
+  label: string
+  startDate: string
+  endDate: string
+}
+
+export interface Category {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  sortOrder: number
+  active: boolean
+}
+
+export interface AlbumSummary {
+  id: string
+  title: string
+  slug: string
+  description: string | null
+  sortOrder: number
+}
+
+/**
+ * Public event shape. Named `ArchiveEvent` so it never collides with the DOM
+ * `Event` type in shared code.
+ */
+export interface ArchiveEvent {
+  id: string
+  title: string
+  slug: string
+  description: string | null
+  eventDate: string
+  location: string | null
+  published: boolean
+  featured: boolean
+  academicYear: AcademicYear
+  category: Category
+  albums: AlbumSummary[]
+}
+
+export interface PublicPhotographerCredit {
+  creditName: string
+  creditOrder: number
+}
+
+/** Public photo metadata. Delivery URLs are built client-side. */
+export interface PublicPhoto {
+  id: string
+  title: string | null
+  caption: string | null
+  altText: string | null
+  cloudinaryPublicId: string
+  format: string
+  widthPx: number
+  heightPx: number
+  takenAt: string | null
+  sortOrder: number
+  photographers: PublicPhotographerCredit[]
+}
+
+export interface AlbumDetail {
+  id: string
+  title: string
+  slug: string
+  description: string | null
+  event: ArchiveEvent
+  photos: PageResponse<PublicPhoto>
+}
+
+export interface PublicContributor {
+  id: string
+  displayName: string
+  slug: string
+  bio: string | null
+}

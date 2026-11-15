@@ -35,10 +35,15 @@ describe('application shell', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: /photograph archive, built by its community/i,
+        name: /photographic memory of the college/i,
       }),
     ).toBeInTheDocument()
-    expect(screen.getByText('Foundation ready')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Featured events' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Recently added' }),
+    ).toBeInTheDocument()
   })
 
   it('exposes a skip link to the main landmark', async () => {

@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 00 establishes the repository, local infrastructure, backend, frontend, and verification pipelines. Phase 01 adds the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication and authorization. Phase 03 adds archive management and public read APIs. Phase 04 adds signed Cloudinary uploads, server-side asset verification, submission tracking, photographer credits, and expired-upload cleanup. Phase 05 adds the moderation state machine, user reporting, removal requests, event-suggestion review, administrative audit-log reads, and analytics. Phase 06 adds the frontend design system, application shell, session-aware API client, guarded routing, and shared UI primitives.
+Phase 00 establishes the repository, local infrastructure, backend, frontend, and verification pipelines. Phase 01 adds the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication and authorization. Phase 03 adds archive management and public read APIs. Phase 04 adds signed Cloudinary uploads, server-side asset verification, submission tracking, photographer credits, and expired-upload cleanup. Phase 05 adds the moderation state machine, user reporting, removal requests, event-suggestion review, administrative audit-log reads, and analytics. Phase 06 adds the frontend design system, application shell, session-aware API client, guarded routing, and shared UI primitives. Phase 07 adds public event filters, a contributor directory, and photographer credits to the read API, then builds the public website: home, archive, event, album, contributor, and About pages.
 
 ## 2. Architectural style
 

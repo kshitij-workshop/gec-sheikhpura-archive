@@ -7,17 +7,17 @@ import { RequireRole } from './guards/RequireRole'
 
 const HomePage = lazy(() => import('../features/home/HomePage'))
 const NotFoundPage = lazy(() => import('../features/not-found/NotFoundPage'))
-const ArchivePage = lazy(
-  () => import('../features/placeholders/ArchivePage'),
-)
+const ArchivePage = lazy(() => import('../features/archive/ArchivePage'))
+const EventPage = lazy(() => import('../features/archive/EventPage'))
+const AlbumPage = lazy(() => import('../features/archive/AlbumPage'))
 const ContributorsPage = lazy(
-  () => import('../features/placeholders/ContributorsPage'),
+  () => import('../features/contributors/ContributorsPage'),
 )
-const AboutPage = lazy(() => import('../features/placeholders/AboutPage'))
+const AboutPage = lazy(() => import('../features/about/AboutPage'))
 const ContributePage = lazy(
   () => import('../features/placeholders/ContributePage'),
 )
-const SignInPage = lazy(() => import('../features/placeholders/SignInPage'))
+const SignInPage = lazy(() => import('../features/auth/SignInPage'))
 const DashboardPage = lazy(
   () => import('../features/placeholders/DashboardPage'),
 )
@@ -39,6 +39,8 @@ export function AppRoutes() {
       <Route element={<AppShell />}>
         <Route index element={<HomePage />} />
         <Route path="archive" element={<ArchivePage />} />
+        <Route path="events/:slug" element={<EventPage />} />
+        <Route path="albums/:slug" element={<AlbumPage />} />
         <Route path="contributors" element={<ContributorsPage />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="sign-in" element={<SignInPage />} />

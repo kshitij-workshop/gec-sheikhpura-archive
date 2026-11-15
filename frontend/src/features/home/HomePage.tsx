@@ -1,109 +1,205 @@
 import { Link } from 'react-router'
 
 import {
+  Alert,
   Badge,
-  buttonStyles,
   Card,
+  EmptyState,
   PageHeader,
+  Skeleton,
+  buttonStyles,
 } from '../../components/ui'
+import { EventCard } from '../archive/components/EventCard'
+import { useAcademicYears, useEvents } from '../archive/queries'
 
-const capabilities = [
+const values = [
   {
-    title: 'Events and albums',
+    title: 'Reviewed before publication',
     description:
-      'Browse institutional events, academic years, and curated albums from college history.',
-    deliveryPhase: 'Phase 07',
+      'Every community submission enters moderation. Pending and rejected photographs are never reachable from the public archive.',
   },
   {
-    title: 'Moderated contributions',
+    title: 'Attribution, always',
     description:
-      'Registered contributors submit photographs and track each submission through review.',
-    deliveryPhase: 'Phase 08',
+      'Uploading and photographing are separate roles. Photographer credits are recorded explicitly and shown with each published photograph.',
   },
   {
-    title: 'Attribution and privacy',
+    title: 'Privacy respected',
     description:
-      'Photographers receive explicit credit, and published images follow a strict privacy policy.',
-    deliveryPhase: 'Phase 07',
+      'No facial recognition and no automatic identification. Visitors can report a photograph, and removal requests are reviewed by administrators.',
   },
 ] as const
 
-export default function HomePage() {
+function EventGridSkeleton() {
   return (
-    <div className="space-y-12">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 3 }, (_, index) => (
+        <div
+          key={index}
+          className="space-y-3 rounded-xl border border-archive-line bg-archive-surface p-5"
+        >
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-6 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export default function HomePage() {
+  const featured = useEvents({ featured: true, size: 3 })
+  const latest = useEvents({ size: 6 })
+  const years = useAcademicYears()
+
+  const archiveUnavailable = featured.isError || latest.isError
+
+  return (
+    <div className="space-y-14">
       <PageHeader
-        eyebrow="Preserving college memory"
-        title="The GEC Sheikhpura photograph archive, built by its community."
-        description="A moderated, attribution-first home for the events, people, and places that shaped Government Engineering College, Sheikhpura."
+        eyebrow="The GEC Sheikhpura archive"
+        title="A photographic memory of the college, kept by its community."
+        description="Events, people, and places from Government Engineering College, Sheikhpura — collected, credited, and published with care for future generations."
         actions={
-          <Link
-            to="/archive"
-            className={buttonStyles({ variant: 'primary' })}
-          >
-            Explore the archive
-          </Link>
+          <>
+            <Link to="/archive" className={buttonStyles({ variant: 'primary' })}>
+              Explore the archive
+            </Link>
+            <Link
+              to="/contribute"
+              className={buttonStyles({ variant: 'secondary' })}
+            >
+              Share photographs
+            </Link>
+          </>
         }
       />
 
-      <section
-        aria-labelledby="status-heading"
-        className="grid gap-4 sm:grid-cols-2"
-      >
-        <h2 id="status-heading" className="sr-only">
-          Project status
-        </h2>
+      {archiveUnavailable ? (
+        <Alert tone="warning" title="The archive is temporarily unavailable">
+          Published events could not be loaded right now. You can still browse
+          the archive page or try again in a moment.
+        </Alert>
+      ) : null}
 
-        <Card className="space-y-2 p-6">
-          <Badge tone="success">Foundation ready</Badge>
-          <h3 className="font-serif text-xl font-semibold tracking-tight">
-            The shell is in place
-          </h3>
-          <p className="text-sm leading-relaxed text-archive-muted">
-            The design system, navigation, routing, and session-aware API client
-            are complete. Access tokens are held in memory and refreshed from a
-            secure HttpOnly cookie.
-          </p>
-        </Card>
-
-        <Card className="space-y-2 p-6">
-          <Badge tone="accent">Coming next</Badge>
-          <h3 className="font-serif text-xl font-semibold tracking-tight">
-            Public browsing
-          </h3>
-          <p className="text-sm leading-relaxed text-archive-muted">
-            Published events, albums, and photographs arrive with the public
-            website. Every community submission passes moderation before it
-            appears here.
-          </p>
-        </Card>
-      </section>
-
-      <section aria-labelledby="capabilities-heading" className="space-y-4">
-        <div className="space-y-1">
+      <section aria-labelledby="featured-heading" className="space-y-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2
-            id="capabilities-heading"
+            id="featured-heading"
             className="font-serif text-2xl font-semibold tracking-tight"
           >
-            What the archive will offer
+            Featured events
           </h2>
-          <p className="max-w-2xl text-sm leading-relaxed text-archive-muted">
-            Each capability is delivered by a later phase and remains guarded by
-            server-side authorization throughout.
-          </p>
+          <Link
+            to="/archive?featured=true"
+            className="text-sm font-medium text-archive-accent underline-offset-4 hover:underline"
+          >
+            All featured events
+          </Link>
         </div>
 
+        {featured.isPending ? <EventGridSkeleton /> : null}
+
+        {featured.data && featured.data.items.length === 0 ? (
+          <EmptyState
+            title="Featured events are being prepared"
+            description="Browse the full archive to see everything published so far."
+            action={
+              <Link to="/archive" className={buttonStyles({ variant: 'secondary' })}>
+                Open the archive
+              </Link>
+            }
+          />
+        ) : null}
+
+        {featured.data && featured.data.items.length > 0 ? (
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {featured.data.items.map((event) => (
+              <li key={event.id}>
+                <EventCard event={event} />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
+      <section aria-labelledby="latest-heading" className="space-y-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2
+            id="latest-heading"
+            className="font-serif text-2xl font-semibold tracking-tight"
+          >
+            Recently added
+          </h2>
+          <Link
+            to="/archive"
+            className="text-sm font-medium text-archive-accent underline-offset-4 hover:underline"
+          >
+            View every event
+          </Link>
+        </div>
+
+        {latest.isPending ? <EventGridSkeleton /> : null}
+
+        {latest.data && latest.data.items.length === 0 ? (
+          <EmptyState
+            title="The public archive is just getting started"
+            description="Published events will appear here as administrators complete the first collection."
+          />
+        ) : null}
+
+        {latest.data && latest.data.items.length > 0 ? (
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {latest.data.items.map((event) => (
+              <li key={event.id}>
+                <EventCard event={event} />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
+      {years.data && years.data.length > 0 ? (
+        <section aria-labelledby="years-heading" className="space-y-3">
+          <h2
+            id="years-heading"
+            className="font-serif text-2xl font-semibold tracking-tight"
+          >
+            Browse by academic year
+          </h2>
+          <ul className="flex flex-wrap gap-2">
+            {years.data.map((year) => (
+              <li key={year.id}>
+                <Link
+                  to={`/archive?year=${year.id}`}
+                  className="inline-flex items-center rounded-full border border-archive-line bg-archive-surface px-4 py-1.5 text-sm font-medium text-archive-ink transition-colors hover:border-archive-accent hover:text-archive-accent"
+                >
+                  {year.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <section aria-labelledby="values-heading" className="space-y-4">
+        <div className="space-y-1">
+          <Badge tone="accent">How the archive works</Badge>
+          <h2
+            id="values-heading"
+            className="font-serif text-2xl font-semibold tracking-tight"
+          >
+            Built on care, credit, and consent
+          </h2>
+        </div>
         <ul className="grid gap-4 sm:grid-cols-3">
-          {capabilities.map((capability) => (
-            <li key={capability.title}>
+          {values.map((value) => (
+            <li key={value.title}>
               <Card className="h-full space-y-2 p-5">
-                <h3 className="font-medium text-archive-ink">
-                  {capability.title}
-                </h3>
+                <h3 className="font-medium text-archive-ink">{value.title}</h3>
                 <p className="text-sm leading-relaxed text-archive-muted">
-                  {capability.description}
-                </p>
-                <p className="text-xs uppercase tracking-[0.15em] text-archive-muted">
-                  {capability.deliveryPhase}
+                  {value.description}
                 </p>
               </Card>
             </li>
