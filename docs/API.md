@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 00 established the API conventions. Phase 01 added the database schema, entities, repositories, and shared pagination DTO. Phase 02 implements authentication, account management, and the authorization boundary. Phase 03 implements public academic-year, category, event, album, and approved-photo reads plus admin archive management. Phase 04 implements signed uploads and verified photo registration. Phase 05 implements moderation, reporting, removal requests, event suggestions, audit-log reads, and analytics. Phase 07 adds public event filters and the contributor directory.
+Phase 00 established the API conventions. Phase 01 added the database schema, entities, repositories, and shared pagination DTO. Phase 02 implements authentication, account management, and the authorization boundary. Phase 03 implements public academic-year, category, event, album, and approved-photo reads plus admin archive management. Phase 04 implements signed uploads and verified photo registration. Phase 05 implements moderation, reporting, removal requests, event suggestions, audit-log reads, and analytics. Phase 07 adds public event filters and the contributor directory. Phase 08 adds display labels to the user-scoped dashboard read models; no new public endpoint is introduced.
 
 Every endpoint documented below is now implemented.
 
@@ -258,6 +258,12 @@ Governance rules:
 | `GET` | `/api/v1/me/event-suggestions` | Implemented | Track own suggestions |
 | `POST` | `/api/v1/me/photos/{id}/removal-request` | Implemented | Request removal of an own photograph |
 | `POST` | `/api/v1/photos/{id}/reports` | Implemented | Report a publicly visible photograph |
+
+Own submissions, own photographs, and own event suggestions carry the display labels a dashboard needs, so tracking never resolves identifiers against public endpoints (which would fail for unpublished events and albums):
+
+- `GET /me/submissions` items include `eventTitle` and `albumTitle`.
+- `GET /me/photos` items include `eventTitle`, `albumTitle`, and ordered `photographers` (`creditName`, `creditOrder`). They still never include a delivery URL or Cloudinary identifier.
+- `GET /me/event-suggestions` items include `categoryName` and `academicYearLabel`.
 
 ### Admin (implemented)
 

@@ -8,6 +8,7 @@ import com.gecarchive.photo.entity.PhotoStatus;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,6 +21,7 @@ public interface PhotoRepository extends JpaRepository<Photo, UUID> {
     Page<Photo> findByEvent_IdAndStatusAndDeletedAtIsNull(
             UUID eventId, PhotoStatus status, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"event", "album", "submission"})
     Page<Photo> findByUploadedBy_IdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
     Page<Photo> findByStatusOrderByCreatedAtAsc(PhotoStatus status, Pageable pageable);
