@@ -242,3 +242,129 @@ export interface RegisteredPhoto {
 export interface MessageResponse {
   message: string
 }
+
+/* ---- Administration ---- */
+
+/** Actions the moderation state machine accepts. */
+export type ModerationAction =
+  | 'approve'
+  | 'reject'
+  | 'flag'
+  | 'hide'
+  | 'remove'
+  | 'restore'
+
+/**
+ * A photograph as moderators see it. Unlike public and uploader read models,
+ * this carries the Cloudinary public ID so administrators can review the image;
+ * the identifier is only reachable through the role-protected admin API.
+ */
+export interface ModerationPhoto {
+  id: string
+  submissionId: string | null
+  eventId: string
+  eventTitle: string
+  albumId: string | null
+  albumTitle: string | null
+  title: string | null
+  caption: string | null
+  altText: string | null
+  format: string
+  cloudinaryPublicId: string
+  widthPx: number
+  heightPx: number
+  sizeBytes: number
+  takenAt: string | null
+  status: PhotoStatus
+  uploadedByUserId: string
+  uploaderDisplayName: string
+  approvedByUserId: string | null
+  approvedAt: string | null
+  createdAt: string
+  photographers: PhotographerCredit[]
+}
+
+/** One append-only moderation transition. */
+export interface ModerationHistoryEntry {
+  id: string
+  action: string
+  actorRole: PersistedRole
+  actorDisplayName: string
+  fromStatus: PhotoStatus | null
+  toStatus: PhotoStatus
+  reason: string | null
+  createdAt: string
+}
+
+/** An album as the administrator archive endpoints return it. */
+export interface AdminAlbum {
+  id: string
+  title: string
+  slug: string
+  description: string | null
+  published: boolean
+  sortOrder: number
+  eventId: string
+  eventTitle: string
+  eventSlug: string
+}
+
+export interface AdminReport {
+  id: string
+  photoId: string
+  reportedByUserId: string
+  category: string
+  details: string
+  status: string
+  resolutionNote: string | null
+  handledByUserId: string | null
+  handledAt: string | null
+  createdAt: string
+}
+
+export interface AdminRemovalRequest {
+  id: string
+  photoId: string
+  requestedByUserId: string
+  reason: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  resolutionNote: string | null
+  handledByUserId: string | null
+  handledAt: string | null
+  createdAt: string
+}
+
+export type AdminEventSuggestion = EventSuggestion
+
+export interface AuditLogEntry {
+  id: string
+  actorUserId: string | null
+  actorRole: string | null
+  actorDisplayName: string | null
+  action: string
+  entityType: string
+  entityId: string
+  beforeState: Record<string, unknown> | null
+  afterState: Record<string, unknown> | null
+  ipAddress: string | null
+  userAgent: string | null
+  createdAt: string
+}
+
+export interface AnalyticsSummary {
+  photosByStatus: Record<string, number>
+  submissionsByStatus: Record<string, number>
+  reportsByStatus: Record<string, number>
+  removalRequestsByStatus: Record<string, number>
+  suggestionsByStatus: Record<string, number>
+  usersByStatus: Record<string, number>
+  usersByRole: Record<string, number>
+  events: number
+  publishedEvents: number
+  albums: number
+  publishedAlbums: number
+  academicYears: number
+  categories: number
+  activeCategories: number
+  contributors: number
+}

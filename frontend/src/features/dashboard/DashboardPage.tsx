@@ -10,7 +10,7 @@ import {
 } from '../../components/ui'
 import { formatCredits, formatTimestamp } from '../../lib/format'
 import { useAuth } from '../auth/useAuth'
-import { StatusBadge } from './components/StatusBadge'
+import { StatusBadge } from '../../components/domain/StatusBadge'
 import { useMyPhotos, useMySubmissions, useMySuggestions } from './queries'
 
 function countLabel(count: number | undefined, singular: string, plural: string) {

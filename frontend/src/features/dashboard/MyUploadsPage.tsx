@@ -20,7 +20,7 @@ import { requestRemoval } from '../../lib/api/contributionApi'
 import type { UserPhoto } from '../../lib/api/types'
 import { formatCredits, formatTimestamp } from '../../lib/format'
 import { formatBytes } from '../../lib/uploadValidation'
-import { StatusBadge } from './components/StatusBadge'
+import { StatusBadge } from '../../components/domain/StatusBadge'
 import { useMyPhotos } from './queries'
 
 const PAGE_SIZE = 10

@@ -11,7 +11,7 @@ import {
   buttonStyles,
 } from '../../components/ui'
 import { formatTimestamp } from '../../lib/format'
-import { StatusBadge } from './components/StatusBadge'
+import { StatusBadge } from '../../components/domain/StatusBadge'
 import { useMySubmissions } from './queries'
 
 const PAGE_SIZE = 10

@@ -1,10 +1,13 @@
 import type {
   AcademicYear,
+  AdminAlbum,
   AlbumDetail,
   AlbumSummary,
   ArchiveEvent,
   Category,
   EventSuggestion,
+  ModerationHistoryEntry,
+  ModerationPhoto,
   PublicContributor,
   PublicPhoto,
   RegisteredPhoto,
@@ -223,6 +226,71 @@ export function makeRegisteredPhoto(
     takenAt: '2026-02-14T09:30:00Z',
     status: 'PENDING',
     photographers: [{ contributorProfileId: null, creditName: 'Asha Verma', creditOrder: 0 }],
+    ...overrides,
+  }
+}
+
+export function makeModerationPhoto(
+  overrides: Partial<ModerationPhoto> = {},
+): ModerationPhoto {
+  return {
+    id: 'b1111111-1111-4111-8111-111111111111',
+    submissionId: makeSubmission().id,
+    eventId: makeEvent().id,
+    eventTitle: makeEvent().title,
+    albumId: makeAlbumSummary().id,
+    albumTitle: makeAlbumSummary().title,
+    title: 'Opening ceremony',
+    caption: 'The ceremony begins on the main lawn.',
+    altText: 'Students gathered on the main lawn during the opening ceremony',
+    format: 'jpg',
+    cloudinaryPublicId: 'gecs-test/submissions/b1111111/asset',
+    widthPx: 1600,
+    heightPx: 1067,
+    sizeBytes: 2_400_000,
+    takenAt: '2026-02-14T09:30:00Z',
+    status: 'PENDING',
+    uploadedByUserId: '3f1c2b4a-0000-4000-8000-000000000001',
+    uploaderDisplayName: 'Asha Verma',
+    approvedByUserId: null,
+    approvedAt: null,
+    createdAt: '2026-02-15T09:00:00Z',
+    photographers: [
+      { contributorProfileId: null, creditName: 'Asha Verma', creditOrder: 0 },
+    ],
+    ...overrides,
+  }
+}
+
+export function makeModerationHistoryEntry(
+  overrides: Partial<ModerationHistoryEntry> = {},
+): ModerationHistoryEntry {
+  return {
+    id: 'b2222222-2222-4222-8222-222222222222',
+    action: 'SUBMIT',
+    actorRole: 'USER',
+    actorDisplayName: 'Asha Verma',
+    fromStatus: null,
+    toStatus: 'PENDING',
+    reason: null,
+    createdAt: '2026-02-15T09:00:00Z',
+    ...overrides,
+  }
+}
+
+export function makeAdminAlbum(
+  overrides: Partial<AdminAlbum> = {},
+): AdminAlbum {
+  return {
+    id: makeAlbumSummary().id,
+    title: makeAlbumSummary().title,
+    slug: makeAlbumSummary().slug,
+    description: makeAlbumSummary().description,
+    published: true,
+    sortOrder: 0,
+    eventId: makeEvent().id,
+    eventTitle: makeEvent().title,
+    eventSlug: makeEvent().slug,
     ...overrides,
   }
 }

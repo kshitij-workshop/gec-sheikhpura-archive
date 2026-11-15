@@ -2,6 +2,7 @@ package com.gecarchive.moderation;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -162,6 +163,48 @@ class ModerationIntegrationIT extends AbstractAuthIntegrationTest {
                         .contentType(JSON)
                         .content("{\"albumId\":\"" + foreignAlbum.getId() + "\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void moderationQueueCarriesContextAndAnAdminOnlyPreviewIdentifier() throws Exception {
+        User admin = account(Role.ADMIN);
+        User uploader = account(Role.USER);
+        Event event = event(admin);
+        Album album = album(event, admin);
+        String adminAuth = auth(admin);
+        Submitted submitted = submitPhoto(auth(uploader), event.getId(), album.getId());
+
+        String queueBody = mockMvc.perform(get("/api/v1/admin/moderation/photos?status=PENDING")
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String byId = "$.items[?(@.id == '" + submitted.photoId() + "')]";
+        List<String> eventTitles = JsonPath.read(queueBody, byId + ".eventTitle");
+        List<String> albumTitles = JsonPath.read(queueBody, byId + ".albumTitle");
+        List<String> publicIds = JsonPath.read(queueBody, byId + ".cloudinaryPublicId");
+        List<String> formats = JsonPath.read(queueBody, byId + ".format");
+        List<String> uploaders = JsonPath.read(queueBody, byId + ".uploaderDisplayName");
+
+        assertThat(eventTitles).containsExactly(event.getTitle());
+        assertThat(albumTitles).containsExactly(album.getTitle());
+        assertThat(formats).containsExactly("jpg");
+        assertThat(uploaders).containsExactly(uploader.getDisplayName());
+        assertThat(publicIds).hasSize(1);
+        assertThat(publicIds.getFirst()).contains("/submissions/");
+
+        String approvedQueue = mockMvc.perform(get("/api/v1/admin/moderation/photos?status=APPROVED")
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat((List<?>) JsonPath.read(approvedQueue, byId + ".id")).isEmpty();
+
+        // The preview identifier is admin-only and never reaches another read model.
+        String ownPhotos = mockMvc.perform(get("/api/v1/me/photos")
+                        .header(HttpHeaders.AUTHORIZATION, auth(uploader)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(ownPhotos).doesNotContain("cloudinaryPublicId");
     }
 
     @Test

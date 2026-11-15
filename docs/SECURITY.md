@@ -292,10 +292,12 @@ Never trust client-provided URLs, public IDs, byte sizes, formats, or dimensions
 
 ### Private pending assets
 
-- Pending uploads must not use public delivery URLs.
-- Use a private/authenticated delivery mode or a separately restricted mechanism.
-- Approval must transition the asset to public delivery safely, or public pages must serve controlled URLs.
-- Verify the exact Cloudinary behavior in a Phase 04 spike before implementation.
+- Pending and rejected photographs must never be exposed through public APIs. Public photo responses are produced only by the approved-photo publication predicate.
+- Public gallery pages build delivery URLs only from public read models. They never receive identifiers for pending assets and never resolve an identifier against an admin endpoint.
+- Administrators receive `cloudinaryPublicId` and `format` in `GET /admin/moderation/photos` so they can review an upload before approving it. The disclosure is deliberately limited to the role-protected `/admin/**` surface; member (`/me`) and public read models continue to omit delivery identifiers. `ModerationIntegrationIT` asserts that `/me/photos` does not contain the field.
+- The identifier is not treated as a secret. Uploads are verified and stored as public Cloudinary assets, so the privacy boundary is API discovery plus moderation, not URL secrecy. If the archive later needs URL secrecy for pending assets, it must add authenticated delivery and signed URLs rather than relying on an unguessable public ID (ADR-0023).
+- Admin previews use the same unsigned delivery helper as the public gallery. When the deployment has no Cloudinary cloud name, the moderation UI shows a placeholder and makes no image request.
+- Approval does not transition the asset between delivery modes in this phase. A future delivery-mode change must be designed and tested explicitly before it is relied on.
 
 ### Cleanup and metadata
 

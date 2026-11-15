@@ -659,3 +659,28 @@ Phase 08 needs a member dashboard and a contribution flow. The existing own-cont
 - The upload UI cannot show thumbnails for pending items; members review filenames, metadata, and statuses instead.
 - Own removal requests are tracked only for the current session because no list endpoint exists yet; after a reload the API's conflict response is authoritative.
 - Manual end-to-end upload verification requires Cloudinary credentials in the development environment. Without them, the UI exercises and reports the authorization failure rather than simulating success.
+
+---
+
+## ADR-0023 — Administrator-only preview identifiers in the moderation queue
+
+**Status:** Accepted
+
+### Context
+
+Phase 09 needs a moderation workspace, but the queue read model returned only metadata. A moderator could not see the photograph they were about to publish, which is untenable for a photographic archive. The assets are already verified and stored through Cloudinary, and no signed-delivery infrastructure exists. Public and member read models intentionally omit delivery identifiers so pending and rejected content stays undiscoverable.
+
+### Decision
+
+- Add `cloudinaryPublicId` and `format` to the administrator moderation read model, together with `eventTitle` and `albumTitle` so the queue is readable without extra lookups.
+- Return those fields only from role-protected `/admin/moderation/photos` and its transitions. Public and `/me` DTOs remain unchanged and continue to omit delivery identifiers.
+- Render the preview in the admin UI with the existing public delivery helper. When the deployment has no cloud name, show a placeholder instead of constructing an unknown URL.
+- Batch-load event, album, and uploader relationships for the queue with `@EntityGraph` rather than issuing per-row queries.
+- Treat the public ID as a deliberate role-scoped disclosure, not a secret. The privacy boundary is the API surface plus moderation, not URL obscurity. Signed or authenticated delivery for pending assets would be a separate, larger change and requires its own ADR.
+
+### Consequences
+
+- Moderators can judge composition, quality, and attribution before approving a photograph.
+- The disclosure is testable: `ModerationIntegrationIT` checks that the queue carries the identifier while `/me/photos` does not.
+- Pending assets remain discoverable by anyone who already knows their public ID; the archive does not claim URL secrecy.
+- A future move to private delivery must cover uploads, verification, previews, and approval together rather than adding signing to one screen.

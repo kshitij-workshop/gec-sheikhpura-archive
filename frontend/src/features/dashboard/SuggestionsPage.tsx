@@ -19,7 +19,7 @@ import { createSuggestion } from '../../lib/api/contributionApi'
 import type { CreateSuggestionInput } from '../../lib/api/contributionApi'
 import { formatEventDate, formatTimestamp } from '../../lib/format'
 import { useAcademicYears, useCategories } from '../archive/queries'
-import { StatusBadge } from './components/StatusBadge'
+import { StatusBadge } from '../../components/domain/StatusBadge'
 import { useMySuggestions } from './queries'
 
 const PAGE_SIZE = 10

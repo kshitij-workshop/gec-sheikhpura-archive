@@ -24,8 +24,10 @@ public interface PhotoRepository extends JpaRepository<Photo, UUID> {
     @EntityGraph(attributePaths = {"event", "album", "submission"})
     Page<Photo> findByUploadedBy_IdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"event", "album", "uploadedBy"})
     Page<Photo> findByStatusOrderByCreatedAtAsc(PhotoStatus status, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"event", "album", "uploadedBy"})
     Page<Photo> findAllByOrderByCreatedAtAsc(Pageable pageable);
 
     long countBySubmission_Id(UUID submissionId);

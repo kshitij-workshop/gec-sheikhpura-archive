@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import { Route, Routes } from 'react-router'
+import { Navigate, Route, Routes } from 'react-router'
 
 import { AppShell } from './AppShell'
 import { RequireAuth } from './guards/RequireAuth'
@@ -48,7 +48,19 @@ const SuggestionsPage = lazy(
   () => import('../features/dashboard/SuggestionsPage'),
 )
 const ProfilePage = lazy(() => import('../features/dashboard/ProfilePage'))
-const AdminPage = lazy(() => import('../features/placeholders/AdminPage'))
+const AdminLayout = lazy(() => import('../features/admin/AdminLayout'))
+const ModerationQueuePage = lazy(
+  () => import('../features/admin/ModerationQueuePage'),
+)
+const AdminGovernancePage = lazy(
+  () => import('../features/admin/AdminGovernancePage'),
+)
+const AdminArchiveManagementPage = lazy(
+  () => import('../features/admin/AdminArchiveManagementPage'),
+)
+const AdminOversightPage = lazy(
+  () => import('../features/admin/AdminOversightPage'),
+)
 const ForbiddenPage = lazy(
   () => import('../features/placeholders/ForbiddenPage'),
 )
@@ -90,13 +102,20 @@ export function AppRoutes() {
               <Route path="suggestions" element={<SuggestionsPage />} />
               <Route path="profile" element={<ProfilePage />} />
             </Route>
-          </Route>
-        </Route>
 
-        <Route
-          element={<RequireRole roles={['ADMIN', 'SUPER_ADMIN']} />}
-        >
-          <Route path="admin" element={<AdminPage />} />
+            <Route element={<RequireRole roles={['ADMIN', 'SUPER_ADMIN']} />}>
+              <Route path="admin" element={<AdminLayout />}>
+                <Route
+                  index
+                  element={<Navigate to="/admin/moderation" replace />}
+                />
+                <Route path="moderation" element={<ModerationQueuePage />} />
+                <Route path="governance" element={<AdminGovernancePage />} />
+                <Route path="archive" element={<AdminArchiveManagementPage />} />
+                <Route path="oversight" element={<AdminOversightPage />} />
+              </Route>
+            </Route>
+          </Route>
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />

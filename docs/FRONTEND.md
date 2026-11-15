@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 06 established the frontend foundation: design tokens and shared components, the application shell and navigation, a session-aware API client, and the route table with guards. Phase 07 built the public website: home, archive with server-side filters and pagination, event and album pages with an accessible photo viewer, the contributor directory, About, and the sign-in form. Phase 08 adds the member experience: registration, email verification, password recovery, forced password rotation, the contribution upload flow, and dashboard views for uploads, submissions, event suggestions, and the profile. Administration remains a Phase 09 placeholder.
+Phase 06 established the frontend foundation: design tokens and shared components, the application shell and navigation, a session-aware API client, and the route table with guards. Phase 07 built the public website: home, archive with server-side filters and pagination, event and album pages with an accessible photo viewer, the contributor directory, About, and the sign-in form. Phase 08 adds the member experience: registration, email verification, password recovery, forced password rotation, the contribution upload flow, and dashboard views for uploads, submissions, event suggestions, and the profile. Phase 09 completes administration with the admin shell, photograph moderation queue, governance queues, archive management, and people/oversight pages.
 
 The frontend is a React 19 single-page application built with Vite and TypeScript. It is organised by feature, and every file that reaches the browser is public: no secret may be placed in `VITE_*` variables.
 
@@ -20,9 +20,11 @@ frontend/src/
 │   ├── router.tsx           lazy route table and guard nesting
 │   └── guards/              RequireAuth, RequireRole, RequirePasswordReady
 ├── components/ui/           design-system primitives
+├── components/domain/       shared domain presentation (status badge and labels)
 ├── features/
 │   ├── about/               public About page
 │   ├── account/             registration, verification, and password pages
+│   ├── admin/               administration shell, moderation queue, actions, history
 │   ├── archive/             archive, event and album pages, queries, gallery components
 │   ├── auth/                session provider, sign-in form, account menu
 │   ├── contributions/       direct-to-Cloudinary upload flow
@@ -30,10 +32,11 @@ frontend/src/
 │   ├── dashboard/           member overview, uploads, submissions, suggestions, profile
 │   ├── home/                public home page
 │   ├── not-found/           unknown-route page
-│   └── placeholders/        administration and forbidden route scaffolds
+│   └── placeholders/        forbidden route scaffold
 ├── lib/
 │   ├── api/client.ts        fetch transport, bearer token, CSRF, refresh
 │   ├── api/accountApi.ts    account lifecycle and profile mutations
+│   ├── api/adminApi.ts      administrative moderation and album reads
 │   ├── api/archiveApi.ts    public archive reads and query serialization
 │   ├── api/contributionApi.ts  own submissions, uploads, and suggestions
 │   ├── api/errorMessage.ts  safe failure guidance for member actions
@@ -103,10 +106,14 @@ Routes are code-split with `React.lazy`; the shell renders one `Suspense` fallba
 | `/dashboard/submissions` | `USER`, `ADMIN`, `SUPER_ADMIN` | Phase 08 |
 | `/dashboard/suggestions` | `USER`, `ADMIN`, `SUPER_ADMIN` | Phase 08 |
 | `/dashboard/profile` | `USER`, `ADMIN`, `SUPER_ADMIN` | Phase 08 |
-| `/admin` | `ADMIN`, `SUPER_ADMIN` | Phase 09 |
+| `/admin` | `ADMIN`, `SUPER_ADMIN` | Phase 09 — redirects to `/admin/moderation` |
+| `/admin/moderation` | `ADMIN`, `SUPER_ADMIN` | Phase 09 |
+| `/admin/governance` | `ADMIN`, `SUPER_ADMIN` | Phase 09 |
+| `/admin/archive` | `ADMIN`, `SUPER_ADMIN` | Phase 09 |
+| `/admin/oversight` | `ADMIN`, `SUPER_ADMIN` | Phase 09 |
 | `*` | Public not-found page | Phase 06 |
 
-`RequireAuth` redirects anonymous visitors to `/sign-in` and records the attempted path in router state as `from`. `RequireRole` redirects signed-in users whose role does not match to `/forbidden`. `RequirePasswordReady` nests inside `RequireAuth` and redirects accounts with `passwordChangeRequired` to `/account/password`, which is deliberately outside that guard so the form is reachable.
+`RequireAuth` redirects anonymous visitors to `/sign-in` and records the attempted path in router state as `from`. `RequireRole` redirects signed-in users whose role does not match to `/forbidden`. `RequirePasswordReady` nests inside `RequireAuth` and redirects accounts with `passwordChangeRequired` to `/account/password`, which is deliberately outside that guard so the form is reachable. The admin routes nest inside both guards because `PasswordChangeRequiredFilter` also blocks admin APIs.
 
 These guards are a usability affordance only. Every request is authorized again by the API; a modified client cannot widen its permissions.
 
@@ -161,6 +168,18 @@ All dashboard reads are scoped to the authenticated member by the API. The front
 
 Upload authorization, signing, and asset verification remain server-side. The frontend never receives the Cloudinary API secret and never chooses the asset identifier beyond echoing the server-issued public ID. When Cloudinary is not configured in development, authorization fails and the page reports the failure honestly instead of simulating success.
 
+### Administration
+
+Phase 09 adds the complete administration workspace.
+
+- `/admin` renders `AdminLayout`, which links only implemented sections (currently Moderation) and redirects its index route to `/admin/moderation`.
+- The queue keeps its state in the URL: `/admin/moderation?status=&page=`. A missing `status` means pending review, `status=ALL` lists every state, and pages are one-based for readers while the API stays zero-based.
+- Each queue card shows the event and album labels, uploader display name, dimensions, format, size, dates, and ordered photographer credits. The API also returns `cloudinaryPublicId` for this role-protected read model, so the card can render the same delivery helper as the public gallery. If the deployment has no Cloudinary cloud name, the card shows a placeholder instead of a broken image. The identifier never appears in public or `/me` responses.
+- Available action buttons are derived from a local mirror of the server transition table (`moderationActions.ts`). The API re-validates every transition and returns `409` on a race; the UI reports the problem detail rather than assuming success.
+- Approval asks for an album only when the photograph has none, and lists that event's albums including unpublished ones with a visible warning. Every other action requires a reason. Reasons and album choices are validated in the dialog, then recorded by the API in moderation history and the audit log.
+- Moderation history loads on demand per photograph, not for every card, and shows the actor, role, transition, reason, and date.
+- A successful action closes the dialog, clears stale queue/history queries, and shows a confirmation notice. Nothing is removed from the DOM as if it had succeeded before the server responded.
+
 ## 7. Session and API client
 
 `lib/api/client.ts` is the only transport for API calls.
@@ -210,6 +229,10 @@ Vitest with jsdom and React Testing Library covers:
 - Shell and routing: identity, primary and mobile navigation, account menu, not-found page, guard redirects for anonymous users, members, administrators, and super administrators, plus the forced-password-change gate.
 - Account lifecycle: registration policy and generic success, explicit email verification, expired-token handling and resend, forgot-password non-enumeration, reset completion, forced password change with session clearing, and the sign-in notice.
 - Member dashboard: summary counts and recent activity, own upload metadata and photographer credits, removal requests with reasons, submission tracking, suggestion creation and validation, and profile updates through `setUser`.
+- Administration: guarded admin routes and index redirect, pending queue reads with archive context, URL-driven status filters, empty and error states, reason-required rejection, album selection only when approval needs one, and lazy moderation history.
+- Governance: report, removal-request, and event-suggestion queues with status filters and recorded resolutions.
+- Archive management: create academic years, categories, draft events, and draft albums; publish or unpublish events.
+- People and oversight: searchable user directory, status changes, super-admin-only role changes, operational analytics, and paginated audit activity.
 - Contribution flow: event selection, file queue, required photographer credits, submission creation, signed Cloudinary upload, photo registration, and per-item retry after a failed upload.
 - Contribution helpers: password policy mirror, upload format/size validation, and Cloudinary upload request construction, identifier checking, error reporting, and network failure handling.
 - Public pages: home sections and failure notice, archive listing/filtering/pagination/empty/error states, event metadata and album links, album attribution and not-found state, contributor directory without account details.
@@ -221,7 +244,7 @@ Vitest with jsdom and React Testing Library covers:
 
 ## 10. Deferred work
 
-- Moderation, governance, and analytics dashboards (Phase 09).
+- Phase 09 is complete. Future work can improve bulk operations, richer editing forms, and dedicated detail views without changing the authorization boundary.
 - A user-facing list of own removal requests; the API currently supports creation only.
 - Contributor profile claiming and profile-edit permissions.
 - Standalone photograph pages and social preview metadata for shared links (later phase).

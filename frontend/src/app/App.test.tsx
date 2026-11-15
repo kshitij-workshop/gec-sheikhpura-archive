@@ -231,7 +231,7 @@ describe('route guards', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'Admin dashboard',
+        name: 'Moderation queue',
       }),
     ).toBeInTheDocument()
   })
@@ -242,7 +242,24 @@ describe('route guards', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'Admin dashboard',
+        name: 'Moderation queue',
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('keeps administrators with a temporary password out of the admin area', async () => {
+    renderApp({
+      path: '/admin/moderation',
+      auth: makeAuth({
+        status: 'authenticated',
+        user: makeUser({ role: 'ADMIN', passwordChangeRequired: true }),
+      }),
+    })
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Change your password',
       }),
     ).toBeInTheDocument()
   })

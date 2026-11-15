@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 00 established the API conventions. Phase 01 added the database schema, entities, repositories, and shared pagination DTO. Phase 02 implements authentication, account management, and the authorization boundary. Phase 03 implements public academic-year, category, event, album, and approved-photo reads plus admin archive management. Phase 04 implements signed uploads and verified photo registration. Phase 05 implements moderation, reporting, removal requests, event suggestions, audit-log reads, and analytics. Phase 07 adds public event filters and the contributor directory. Phase 08 adds display labels to the user-scoped dashboard read models; no new public endpoint is introduced.
+Phase 00 established the API conventions. Phase 01 added the database schema, entities, repositories, and shared pagination DTO. Phase 02 implements authentication, account management, and the authorization boundary. Phase 03 implements public academic-year, category, event, album, and approved-photo reads plus admin archive management. Phase 04 implements signed uploads and verified photo registration. Phase 05 implements moderation, reporting, removal requests, event suggestions, audit-log reads, and analytics. Phase 07 adds public event filters and the contributor directory. Phase 08 adds display labels to the user-scoped dashboard read models; no new public endpoint is introduced. Phase 09 completes the administrator frontend for the existing moderation, governance, archive, user, audit, and analytics contracts; it also adds event/album labels and an administrator-only preview identifier to the moderation queue read model; no public contract changes.
 
 Every endpoint documented below is now implemented.
 
@@ -217,10 +217,12 @@ Upload authorizations expire after 10 minutes, are single-use, are bound to the 
 ### Moderation flow
 
 1. Registration persists a `PENDING` photograph and writes the opening `SUBMIT` moderation record.
-2. `GET /admin/moderation/photos?status=PENDING` returns the oldest-first queue with photographer credits for attribution review.
+2. `GET /admin/moderation/photos?status=PENDING` returns the oldest-first queue with photographer credits for attribution review. Each item also carries `eventTitle`, `albumTitle`, `cloudinaryPublicId`, and `format` so an administrator can recognise the photograph before approving it.
 3. `POST /admin/photos/{id}/{approve|reject|flag|hide|remove|restore}` transitions the photograph. Every transition writes a `photo_moderations` row, an audit row, and re-derives the owning submission's status in one transaction.
 4. `GET /admin/photos/{id}/moderation-history` returns the append-only history.
 5. Approved photographs become publicly readable only when their album and event are also published and not deleted.
+
+The queue's `cloudinaryPublicId` is an administrator-only disclosure. It is read exclusively through role-protected `/admin/**` endpoints; public and member read models continue to omit delivery identifiers, and pending or rejected assets never appear in a public response. See ADR-0023.
 
 Allowed transitions:
 

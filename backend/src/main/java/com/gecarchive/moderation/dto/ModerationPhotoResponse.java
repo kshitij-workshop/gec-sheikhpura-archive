@@ -8,15 +8,26 @@ import com.gecarchive.photo.entity.Photo;
 import com.gecarchive.photo.entity.PhotoPhotographer;
 import com.gecarchive.upload.dto.PhotographerCreditResponse;
 
+/**
+ * A photograph as moderators see it.
+ *
+ * <p>Unlike the public and uploader-facing read models, this response includes
+ * the Cloudinary public ID so an administrator can review the image before
+ * approving it. The identifier is only reachable through the role-protected
+ * admin API; it is never added to a public response.</p>
+ */
 public record ModerationPhotoResponse(
         UUID id,
         UUID submissionId,
         UUID eventId,
+        String eventTitle,
         UUID albumId,
+        String albumTitle,
         String title,
         String caption,
         String altText,
         String format,
+        String cloudinaryPublicId,
         int widthPx,
         int heightPx,
         long sizeBytes,
@@ -38,11 +49,14 @@ public record ModerationPhotoResponse(
                 photo.getId(),
                 photo.getSubmission() == null ? null : photo.getSubmission().getId(),
                 photo.getEvent().getId(),
+                photo.getEvent().getTitle(),
                 photo.getAlbum() == null ? null : photo.getAlbum().getId(),
+                photo.getAlbum() == null ? null : photo.getAlbum().getTitle(),
                 photo.getTitle(),
                 photo.getCaption(),
                 photo.getAltText(),
                 photo.getFormat(),
+                photo.getCloudinaryPublicId(),
                 photo.getWidthPx(),
                 photo.getHeightPx(),
                 photo.getSizeBytes(),
