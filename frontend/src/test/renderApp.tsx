@@ -13,6 +13,8 @@ export const anonymousAuth: AuthState = {
   user: null,
   login: () => Promise.resolve(),
   logout: () => Promise.resolve(),
+  setUser: () => undefined,
+  clearSession: () => undefined,
 }
 
 export function makeUser(overrides: Partial<User> = {}): User {

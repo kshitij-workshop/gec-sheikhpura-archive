@@ -4,7 +4,7 @@ A community-driven digital photography archive for Government Engineering Colleg
 
 The archive preserves college events, photographs, albums, and contributor credits in one public, moderated platform. Registered contributors submit photographs; administrators review submissions before publication.
 
-> **Status:** Phase 07 — the public website is in place: home, archive with filters and pagination, event and album pages with an accessible photo viewer, contributors, and About. Contribution, dashboard, and administration experiences arrive in Phases 08–09.
+> **Status:** Phase 08 — members can register, verify their email, recover or change passwords, upload photographs through the direct-to-Cloudinary contribution flow, track uploads and submissions, suggest events, and manage their profile. The public website from Phase 07 remains in place. Administration arrives in Phase 09.
 
 ## Product principles
 

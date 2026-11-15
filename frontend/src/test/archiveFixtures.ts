@@ -4,8 +4,14 @@ import type {
   AlbumSummary,
   ArchiveEvent,
   Category,
+  EventSuggestion,
   PublicContributor,
   PublicPhoto,
+  RegisteredPhoto,
+  RemovalRequest,
+  Submission,
+  UploadAuthorization,
+  UserPhoto,
 } from '../lib/api/types'
 import { pageOf } from './fetchStub'
 
@@ -96,6 +102,127 @@ export function makeContributor(
     displayName: 'Asha Verma',
     slug: 'asha-verma',
     bio: 'Student photographer, class of 2027.',
+    ...overrides,
+  }
+}
+
+export function makeSubmission(
+  overrides: Partial<Submission> = {},
+): Submission {
+  return {
+    id: '77777777-7777-4777-8777-777777777777',
+    eventId: makeEvent().id,
+    eventTitle: makeEvent().title,
+    albumId: makeAlbumSummary().id,
+    albumTitle: makeAlbumSummary().title,
+    status: 'PENDING',
+    note: 'Photographs from the main lawn.',
+    createdAt: '2026-02-15T09:00:00Z',
+    updatedAt: '2026-02-15T09:00:00Z',
+    ...overrides,
+  }
+}
+
+export function makeUserPhoto(overrides: Partial<UserPhoto> = {}): UserPhoto {
+  return {
+    id: '88888888-8888-4888-8888-888888888888',
+    submissionId: makeSubmission().id,
+    eventId: makeEvent().id,
+    eventTitle: makeEvent().title,
+    albumId: makeAlbumSummary().id,
+    albumTitle: makeAlbumSummary().title,
+    title: 'Opening ceremony',
+    caption: null,
+    altText: null,
+    format: 'jpg',
+    widthPx: 1600,
+    heightPx: 1067,
+    sizeBytes: 2_400_000,
+    takenAt: '2026-02-14T09:30:00Z',
+    status: 'PENDING',
+    createdAt: '2026-02-15T09:00:00Z',
+    updatedAt: '2026-02-15T09:00:00Z',
+    photographers: [{ contributorProfileId: null, creditName: 'Asha Verma', creditOrder: 0 }],
+    ...overrides,
+  }
+}
+
+export function makeSuggestion(
+  overrides: Partial<EventSuggestion> = {},
+): EventSuggestion {
+  return {
+    id: '99999999-9999-4999-8999-999999999999',
+    title: 'Founders Day',
+    description: 'A celebration of the college founding.',
+    approximateDate: '2026-02-14',
+    categoryId: makeCategory().id,
+    categoryName: makeCategory().name,
+    academicYearId: makeYear().id,
+    academicYearLabel: makeYear().label,
+    suggestedByUserId: '3f1c2b4a-0000-4000-8000-000000000001',
+    reviewedByUserId: null,
+    createdEventId: null,
+    status: 'PENDING',
+    reviewNote: null,
+    reviewedAt: null,
+    createdAt: '2026-02-15T09:00:00Z',
+    ...overrides,
+  }
+}
+
+export function makeRemovalRequest(
+  overrides: Partial<RemovalRequest> = {},
+): RemovalRequest {
+  return {
+    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    photoId: makeUserPhoto().id,
+    requestedByUserId: '3f1c2b4a-0000-4000-8000-000000000001',
+    reason: 'The photograph identifies a student without consent.',
+    status: 'PENDING',
+    resolutionNote: null,
+    handledByUserId: null,
+    handledAt: null,
+    createdAt: '2026-02-16T09:00:00Z',
+    ...overrides,
+  }
+}
+
+export function makeUploadAuthorization(
+  overrides: Partial<UploadAuthorization> = {},
+): UploadAuthorization {
+  return {
+    authorizationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    cloudName: 'gecs-test',
+    apiKey: 'test-key',
+    uploadUrl: 'https://api.cloudinary.com/v1_1/gecs-test/image/upload',
+    uploadPreset: 'archive-test',
+    folder: 'gecs-archive',
+    publicId: 'gecs-archive/submissions/77777777/test-asset',
+    timestamp: 1_800_000_000,
+    signature: 'signed-value',
+    expiresAt: '2026-02-15T09:10:00Z',
+    maxFileSizeBytes: 15 * 1024 * 1024,
+    allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
+    ...overrides,
+  }
+}
+
+export function makeRegisteredPhoto(
+  overrides: Partial<RegisteredPhoto> = {},
+): RegisteredPhoto {
+  return {
+    id: makeUserPhoto().id,
+    submissionId: makeSubmission().id,
+    title: 'Opening ceremony',
+    caption: null,
+    altText: null,
+    format: 'jpg',
+    widthPx: 1600,
+    heightPx: 1067,
+    sizeBytes: 2_400_000,
+    takenAt: '2026-02-14T09:30:00Z',
+    status: 'PENDING',
+    photographers: [{ contributorProfileId: null, creditName: 'Asha Verma', creditOrder: 0 }],
     ...overrides,
   }
 }

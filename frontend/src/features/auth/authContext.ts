@@ -11,6 +11,13 @@ export interface AuthState {
   login: (input: LoginInput) => Promise<void>
   /** Revokes the refresh family and clears local state. */
   logout: () => Promise<void>
+  /** Replaces the cached user after a profile or account update. */
+  setUser: (user: User) => void
+  /**
+   * Drops the in-memory session without calling the API. Used after actions
+   * that already revoke refresh tokens server-side, such as a password change.
+   */
+  clearSession: () => void
 }
 
 export const AuthContext = createContext<AuthState | undefined>(undefined)

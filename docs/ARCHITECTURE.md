@@ -73,7 +73,7 @@ Controllers handle HTTP concerns, validation, and authorization annotations. Ser
 src/
 ├── app/            application shell, router, providers, route guards
 ├── components/ui/  design-system primitives
-├── features/       feature folders such as auth, archive, contributions, admin
+├── features/       feature folders such as account, auth, archive, contributions, dashboard, admin
 ├── lib/            API client, configuration, utilities
 ├── styles/         global styles and design tokens
 └── test/           test setup and shared helpers

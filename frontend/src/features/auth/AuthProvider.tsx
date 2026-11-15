@@ -5,6 +5,7 @@ import {
   refreshAccessToken,
   setAccessToken,
   logoutSession,
+  clearSession as clearApiSession,
 } from '../../lib/api/client'
 import type { LoginInput, User } from '../../lib/api/types'
 import { loginRequest } from './authApi'
@@ -55,8 +56,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
-    await logoutSession()
+    try {
+      await logoutSession()
+    } finally {
+      setSession({ status: 'anonymous', user: null })
+    }
+  }, [])
+
+  const clearSession = useCallback(() => {
+    clearApiSession()
     setSession({ status: 'anonymous', user: null })
+  }, [])
+
+  const setUser = useCallback((user: User) => {
+    setSession((current) =>
+      current.status === 'authenticated'
+        ? { ...current, user }
+        : current,
+    )
   }, [])
 
   const value = useMemo<AuthState>(
@@ -65,8 +82,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: session.user,
       login,
       logout,
+      setUser,
+      clearSession,
     }),
-    [session, login, logout],
+    [session, login, logout, setUser, clearSession],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

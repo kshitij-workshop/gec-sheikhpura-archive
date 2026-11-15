@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 06 established the frontend foundation: design tokens and shared components, the application shell and navigation, a session-aware API client, and the route table with guards. Phase 07 builds the public website on that foundation: home, archive with server-side filters and pagination, event and album pages with an accessible photo viewer, the contributor directory, About, and the sign-in form. Contribution, dashboard, and administration pages remain placeholders for Phases 08–09.
+Phase 06 established the frontend foundation: design tokens and shared components, the application shell and navigation, a session-aware API client, and the route table with guards. Phase 07 built the public website: home, archive with server-side filters and pagination, event and album pages with an accessible photo viewer, the contributor directory, About, and the sign-in form. Phase 08 adds the member experience: registration, email verification, password recovery, forced password rotation, the contribution upload flow, and dashboard views for uploads, submissions, event suggestions, and the profile. Administration remains a Phase 09 placeholder.
 
 The frontend is a React 19 single-page application built with Vite and TypeScript. It is organised by feature, and every file that reaches the browser is public: no secret may be placed in `VITE_*` variables.
 
@@ -18,25 +18,34 @@ frontend/src/
 │   ├── ScrollToTop.tsx      resets scroll on route change
 │   ├── providers.tsx        TanStack Query provider
 │   ├── router.tsx           lazy route table and guard nesting
-│   └── guards/              RequireAuth and RequireRole
+│   └── guards/              RequireAuth, RequireRole, RequirePasswordReady
 ├── components/ui/           design-system primitives
 ├── features/
 │   ├── about/               public About page
+│   ├── account/             registration, verification, and password pages
 │   ├── archive/             archive, event and album pages, queries, gallery components
 │   ├── auth/                session provider, sign-in form, account menu
+│   ├── contributions/       direct-to-Cloudinary upload flow
 │   ├── contributors/        public contributor directory and query
+│   ├── dashboard/           member overview, uploads, submissions, suggestions, profile
 │   ├── home/                public home page
 │   ├── not-found/           unknown-route page
-│   └── placeholders/        contribution and dashboard route scaffolds
+│   └── placeholders/        administration and forbidden route scaffolds
 ├── lib/
 │   ├── api/client.ts        fetch transport, bearer token, CSRF, refresh
+│   ├── api/accountApi.ts    account lifecycle and profile mutations
 │   ├── api/archiveApi.ts    public archive reads and query serialization
+│   ├── api/contributionApi.ts  own submissions, uploads, and suggestions
+│   ├── api/errorMessage.ts  safe failure guidance for member actions
 │   ├── api/retry.ts         shared query retry policy
 │   ├── api/types.ts         API contract types
 │   ├── cloudinary.ts        public image delivery URL builder
+│   ├── cloudinaryUpload.ts  signed browser-to-Cloudinary upload
 │   ├── config.ts            public application configuration
 │   ├── format.ts            archive dates, timestamps, credits, alt text
-│   └── queryClient.ts       TanStack Query defaults
+│   ├── passwordPolicy.ts    client mirror of the server password policy
+│   ├── queryClient.ts       TanStack Query defaults
+│   └── uploadValidation.ts  file checks and upload limits
 ├── styles/global.css        Tailwind import, design tokens, base styles
 └── test/                    setup, fixtures, and the `renderApp` helper
 ```
@@ -82,13 +91,22 @@ Routes are code-split with `React.lazy`; the shell renders one `Suspense` fallba
 | `/contributors` | Public | Phase 07 |
 | `/about` | Public | Phase 07 |
 | `/sign-in` | Public | Phase 07 (form); Phase 06 session contract |
+| `/register` | Public | Phase 08 |
+| `/verify-email?token=` | Public | Phase 08 |
+| `/forgot-password` | Public | Phase 08 |
+| `/reset-password?token=` | Public | Phase 08 |
 | `/forbidden` | Public | Phase 06 |
+| `/account/password` | Authenticated | Phase 08 |
 | `/contribute` | `USER`, `ADMIN`, `SUPER_ADMIN` | Phase 08 |
 | `/dashboard` | `USER`, `ADMIN`, `SUPER_ADMIN` | Phase 08 |
+| `/dashboard/uploads` | `USER`, `ADMIN`, `SUPER_ADMIN` | Phase 08 |
+| `/dashboard/submissions` | `USER`, `ADMIN`, `SUPER_ADMIN` | Phase 08 |
+| `/dashboard/suggestions` | `USER`, `ADMIN`, `SUPER_ADMIN` | Phase 08 |
+| `/dashboard/profile` | `USER`, `ADMIN`, `SUPER_ADMIN` | Phase 08 |
 | `/admin` | `ADMIN`, `SUPER_ADMIN` | Phase 09 |
 | `*` | Public not-found page | Phase 06 |
 
-`RequireAuth` redirects anonymous visitors to `/sign-in` and records the attempted path in router state as `from`. `RequireRole` redirects signed-in users whose role does not match to `/forbidden`.
+`RequireAuth` redirects anonymous visitors to `/sign-in` and records the attempted path in router state as `from`. `RequireRole` redirects signed-in users whose role does not match to `/forbidden`. `RequirePasswordReady` nests inside `RequireAuth` and redirects accounts with `passwordChangeRequired` to `/account/password`, which is deliberately outside that guard so the form is reachable.
 
 These guards are a usability affordance only. Every request is authorized again by the API; a modified client cannot widen its permissions.
 
@@ -108,7 +126,42 @@ Public reads live in `lib/api/archiveApi.ts` and are issued with `auth: false`, 
 
 The sign-in form validates credentials in the browser, posts to `/auth/login`, and continues to the guard-recorded destination. It only accepts same-origin paths as a redirect target, and it returns the same message for an unknown email and a wrong password.
 
-## 6. Session and API client
+## 6. Member experience
+
+### Account lifecycle
+
+- Registration posts to `/auth/register` and always shows the same guidance: a verification email is sent if the address can be registered. The form does not confirm whether an account already exists.
+- Email verification is an explicit button on `/verify-email?token=`. Automatic submission would let mail scanners consume single-use tokens before the member sees the page. The same page can request a new link without revealing whether an unverified account exists.
+- Forgot-password always reports that a reset email was sent if an account exists. Reset links are single-use and expire after one hour.
+- The browser mirrors the server password policy (`lib/passwordPolicy.ts`) for immediate feedback, including the minimum length, letter and digit requirements, common-password rejection, and rejection of the account email or display name. The API validates every password again and remains authoritative.
+- Resetting or changing a password revokes every refresh token server-side. Both flows therefore clear the in-memory session and return to `/sign-in?passwordChanged=1`, rather than leaving a page that will fail on the next refresh.
+- A `passwordChangeRequired` account is redirected from contributor routes to `/account/password`. The API enforces the same rule with `PasswordChangeRequiredFilter`; the guard only avoids dead-end requests.
+
+### Dashboard
+
+All dashboard reads are scoped to the authenticated member by the API. The frontend never resolves identifiers against public endpoints, which would fail for unpublished events and albums.
+
+- `GET /me/submissions`, `GET /me/photos`, and `GET /me/event-suggestions` include the display labels the dashboard needs: event and album titles, ordered photographer credits, and suggestion category/year labels.
+- Own-photo payloads deliberately contain no delivery URL or Cloudinary identifier. Pending and rejected assets must stay unreachable, so "My uploads" shows metadata, status, and attribution instead of thumbnails.
+- Status pills use text as well as colour: pending review, in review, completed, approved, rejected, flagged, hidden, removed, and withdrawn.
+- Removal requests are created from an own upload with a free-text reason. The page marks the request pending for the rest of the session. There is no user-facing list of own removal requests yet, so after a reload the server's `409` remains the source of truth for an existing open request.
+- Event suggestions can be created with optional category, academic year, date, and description. The list shows the reviewer's decision and note when present.
+- Profile edits use `PATCH /me` and replace the cached user through `AuthContext.setUser`, so the account menu updates without another session refresh. Email changes are not offered because ownership verification belongs to the archive office.
+
+### Contribution upload flow
+
+`/contribute` creates one submission batch and uploads its files sequentially:
+
+1. Choose a published event and, optionally, one of its albums.
+2. Add files to a queue. The browser checks extension, MIME type, size (15 MB), and the 50-photo batch limit; the server repeats every check.
+3. For each file, enter the photographer credit explicitly. The upload button refuses to start until every item has one. A batch helper can copy a single credit into empty rows, but it never overwrites an individual credit and never treats the uploader as the photographer.
+4. On submit, `POST /me/submissions` creates the batch. Then, per file, the page requests `POST /me/uploads/authorize`, posts the bytes directly to Cloudinary with `credentials: 'omit'` and no archive bearer token or cookie, and registers the returned public ID with `POST /me/submissions/{id}/photos`.
+5. Each item reports its own state. Failed items keep the saved submission and can be retried individually; retries request a fresh single-use authorization rather than reusing an expired one.
+6. Registered photographs start `PENDING`. Nothing becomes public until moderation approves it.
+
+Upload authorization, signing, and asset verification remain server-side. The frontend never receives the Cloudinary API secret and never chooses the asset identifier beyond echoing the server-issued public ID. When Cloudinary is not configured in development, authorization fails and the page reports the failure honestly instead of simulating success.
+
+## 7. Session and API client
 
 `lib/api/client.ts` is the only transport for API calls.
 
@@ -126,7 +179,7 @@ The sign-in form validates credentials in the browser, posts to `/auth/login`, a
 
 TanStack Query owns server-state caching; interactivity and form state stay local. React Hook Form and Zod are available for the larger forms delivered in later phases; the sign-in form uses Zod directly.
 
-## 7. Accessibility
+## 8. Accessibility
 
 - The shell provides a skip link, one `main` landmark, labelled navigation regions, and a visible focus ring.
 - The mobile navigation and account menu are disclosure buttons with `aria-expanded` and `aria-controls`; the account menu also closes on outside pointer input.
@@ -139,7 +192,7 @@ TanStack Query owns server-state caching; interactivity and form state stay loca
 - Global styles respect `prefers-reduced-motion` and only enable smooth scrolling when motion is allowed.
 - Colour is never the only signal: statuses also carry text.
 
-## 8. Testing
+## 9. Testing
 
 ```bash
 cd frontend
@@ -153,8 +206,12 @@ Vitest with jsdom and React Testing Library covers:
 
 - API transport: bearer injection, CSRF caching, 401 refresh and retry, no-retry rules, single-flight refresh, logout.
 - Archive API: filter serialization, blank-filter omission, slug encoding, public requests without a bearer token.
-- Auth provider and sign-in: session restore, anonymous fallback, validation, login, redirect handling, non-enumerating error messages, logout.
-- Shell and routing: identity, primary and mobile navigation, account menu, not-found page, guard redirects for anonymous users, members, administrators, and super administrators.
+- Auth provider and sign-in: session restore, anonymous fallback, validation, login, redirect handling, non-enumerating error messages, logout, cached-user replacement, and local session clearing.
+- Shell and routing: identity, primary and mobile navigation, account menu, not-found page, guard redirects for anonymous users, members, administrators, and super administrators, plus the forced-password-change gate.
+- Account lifecycle: registration policy and generic success, explicit email verification, expired-token handling and resend, forgot-password non-enumeration, reset completion, forced password change with session clearing, and the sign-in notice.
+- Member dashboard: summary counts and recent activity, own upload metadata and photographer credits, removal requests with reasons, submission tracking, suggestion creation and validation, and profile updates through `setUser`.
+- Contribution flow: event selection, file queue, required photographer credits, submission creation, signed Cloudinary upload, photo registration, and per-item retry after a failed upload.
+- Contribution helpers: password policy mirror, upload format/size validation, and Cloudinary upload request construction, identifier checking, error reporting, and network failure handling.
 - Public pages: home sections and failure notice, archive listing/filtering/pagination/empty/error states, event metadata and album links, album attribution and not-found state, contributor directory without account details.
 - Photo viewer: opening, visible attribution, keyboard navigation, and Escape.
 - Presentation helpers: timezone-safe event dates, credit joining, alt-text fallback, Cloudinary delivery URLs and missing-configuration behaviour.
@@ -162,18 +219,18 @@ Vitest with jsdom and React Testing Library covers:
 
 `src/test/renderApp.tsx` renders the real shell and route table with a stubbed `AuthContext`. `src/test/setup.ts` installs a well-formed empty-archive `fetch` stub before each test; tests that need data replace it. Component tests must await lazy routes with `findBy*` queries.
 
-## 9. Deferred work
+## 10. Deferred work
 
-- Registration, email verification, and password-reset pages (Phase 08).
-- Submission upload, tracking, and profile management (Phase 08).
 - Moderation, governance, and analytics dashboards (Phase 09).
+- A user-facing list of own removal requests; the API currently supports creation only.
+- Contributor profile claiming and profile-edit permissions.
 - Standalone photograph pages and social preview metadata for shared links (later phase).
-- Playwright end-to-end coverage and visual regression checks (Phase 10).
+- Playwright end-to-end coverage, including a real Cloudinary upload run, and visual regression checks (Phase 10).
 
-## 10. Configuration
+## 11. Configuration
 
 `VITE_API_BASE_URL` defaults to `/api/v1`. Development uses the Vite proxy to `http://localhost:8080`; production uses the same-origin `/api` rewrite described in `docs/DECISIONS.md` (ADR-0004).
 
-`VITE_CLOUDINARY_CLOUD_NAME` is the public Cloudinary cloud name used for image delivery. It is not a secret. When it is empty, galleries show an explicit "delivery is not configured" placeholder instead of a broken image.
+`VITE_CLOUDINARY_CLOUD_NAME` is the public Cloudinary cloud name used for image delivery. It is not a secret. When it is empty, galleries show an explicit "delivery is not configured" placeholder instead of a broken image. Uploads do not read any `VITE_*` Cloudinary value: the API issues the cloud name, key, signature, preset, and public ID per authorization.
 
 See `frontend/.env.example`. Never put API keys or secrets in `VITE_*` variables.

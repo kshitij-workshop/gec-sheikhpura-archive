@@ -177,6 +177,43 @@ describe('route guards', () => {
     ).toBeInTheDocument()
   })
 
+  it('contains accounts that must change a temporary password', async () => {
+    renderApp({
+      path: '/dashboard',
+      auth: makeAuth({
+        status: 'authenticated',
+        user: makeUser({ passwordChangeRequired: true }),
+      }),
+    })
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Change your password',
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('keeps the password form reachable during a forced change', async () => {
+    renderApp({
+      path: '/account/password',
+      auth: makeAuth({
+        status: 'authenticated',
+        user: makeUser({ passwordChangeRequired: true }),
+      }),
+    })
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Change your password',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Password change required'),
+    ).toBeInTheDocument()
+  })
+
   it('sends members away from the admin area', async () => {
     renderApp({ path: '/admin', auth: authForRole('USER') })
 

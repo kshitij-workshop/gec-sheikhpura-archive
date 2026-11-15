@@ -292,6 +292,6 @@ Use `EXPLAIN ANALYZE` for expensive public gallery and search queries. Do not ad
 
 1. Exact Cloudinary asset class and private-to-public delivery behavior (Phase 04).
 2. Retention duration for originals, rejected uploads, and removed photographs (Phase 04/05).
-3. Contributor claiming and profile-edit permissions (Phase 08).
+3. Contributor claiming and profile-edit permissions (later phase).
 4. Production backup, restore, and archival procedure (Phase 11).
 5. Whether guest reporting is introduced after rate limiting and abuse controls (Phase 05 added authenticated reporting only; still deferred to Phase 10).

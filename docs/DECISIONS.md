@@ -628,3 +628,34 @@ The PRD requires public visitors to search and filter the archive and to browse 
 - Every new filter inherits the public-visibility predicate, and a regression there fails the browse integration test.
 - Contributors can be browsed publicly while their account details remain private.
 - Future cross-entity search requires its own explicit ADR rather than silently appearing at `/api/v1/search`.
+
+---
+
+## ADR-0022 — Scoped dashboard read models and direct browser uploads
+
+**Status:** Accepted
+
+### Context
+
+Phase 08 needs a member dashboard and a contribution flow. The existing own-contribution endpoints returned identifiers only, so a dashboard would have to resolve each event, album, category, and academic year against public endpoints. That fails for private or unpublished parents and multiplies requests. At the same time, pending and rejected photographs must never acquire a public delivery URL, while uploads must still keep image bytes away from the API.
+
+### Decision
+
+- Extend the user-scoped DTOs rather than adding a dashboard aggregate endpoint: own submissions include `eventTitle` and `albumTitle`; own photographs include event/album titles and ordered photographer credits; own suggestions include `categoryName` and `academicYearLabel`.
+- Batch-load photographer credits for a page of own photographs with one repository query, and use `@EntityGraph` for the owning event, album, and submission, avoiding per-row lookups.
+- Keep every read model scoped by the authenticated user in the repository query. There is no public route that exposes these DTOs.
+- Continue to omit delivery URLs and Cloudinary identifiers from own-photo payloads. The dashboard shows metadata, moderation status, and attribution only. A member cannot use their private tracking view to fetch a pending or rejected asset.
+- Upload directly from the browser to Cloudinary. The page creates one submission, then for each file requests a short-lived single-use authorization, posts the bytes with `credentials: 'omit'` and no archive bearer token or cookie, and registers the server-issued public ID. The API receives no image bytes and the browser never sees the Cloudinary API secret.
+- Process files sequentially with per-item state. A failure leaves the saved submission intact and exposes an individual retry that requests a fresh authorization. The queue never advances another item past a hard submission-level failure by pretending it succeeded.
+- Require an explicit photographer credit before an item can upload. A batch helper may fill empty credits, but it never overwrites an entered credit and never defaults to the uploader.
+- Mirror the server password policy and file limits in the browser for fast feedback. The API validates both again and remains the security boundary.
+- Clear the cached session after a password change or reset. The server revokes every refresh token on those paths, so keeping the SPA in an authenticated state would only defer a guaranteed failure.
+
+### Consequences
+
+- Dashboard pages render labels and credits without N+1 queries or access to public endpoints for private parents.
+- Private upload metadata is visible to its owner but no delivery path is exposed before approval.
+- Uploading a batch costs three requests per file (authorize, image host, register), which is acceptable for a community archive and keeps signing and verification server-side.
+- The upload UI cannot show thumbnails for pending items; members review filenames, metadata, and statuses instead.
+- Own removal requests are tracked only for the current session because no list endpoint exists yet; after a reload the API's conflict response is authoritative.
+- Manual end-to-end upload verification requires Cloudinary credentials in the development environment. Without them, the UI exercises and reports the authorization failure rather than simulating success.

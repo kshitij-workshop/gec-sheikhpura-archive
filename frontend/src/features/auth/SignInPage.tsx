@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { z } from 'zod'
 
 import {
@@ -55,12 +55,14 @@ export default function SignInPage() {
   const { status, user, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  const passwordChanged = searchParams.get('passwordChanged') === '1'
   const state = location.state as { from?: unknown } | null
   const target = safeRedirect(state?.from)
 
@@ -73,10 +75,17 @@ export default function SignInPage() {
           description={`Signed in as ${user.displayName}.`}
         />
         <Card className="space-y-4 p-6">
-          <Alert tone="success" title="Session active">
-            Your access token is kept in memory and refreshed from an HttpOnly
-            cookie.
-          </Alert>
+          {user.passwordChangeRequired ? (
+            <Alert tone="warning" title="Password change required">
+              This account is using a temporary password. Replace it before
+              contributing.
+            </Alert>
+          ) : (
+            <Alert tone="success" title="Session active">
+              Your access token is kept in memory and refreshed from an
+              HttpOnly cookie.
+            </Alert>
+          )}
           <div className="flex flex-wrap gap-2">
             <Link to={target} className={buttonStyles({ variant: 'primary' })}>
               Continue
@@ -136,6 +145,12 @@ export default function SignInPage() {
           </Alert>
         ) : null}
 
+        {passwordChanged ? (
+          <Alert tone="success" title="Password changed">
+            Sign in again with your new password.
+          </Alert>
+        ) : null}
+
         {formError ? (
           <Alert tone="danger" title="Could not sign in">
             {formError}
@@ -185,10 +200,23 @@ export default function SignInPage() {
           </Button>
         </form>
 
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-archive-line pt-4 text-sm">
+          <Link
+            to="/forgot-password"
+            className="font-medium text-archive-accent underline-offset-4 hover:underline"
+          >
+            Forgot your password?
+          </Link>
+          <Link
+            to="/register"
+            className="font-medium text-archive-accent underline-offset-4 hover:underline"
+          >
+            Create an account
+          </Link>
+        </div>
+
         <p className="text-sm leading-relaxed text-archive-muted">
-          Accounts are created through the college onboarding process. Contact
-          an archive administrator if you need access or have forgotten your
-          password.
+          New accounts must verify their email address before contributing.
         </p>
       </Card>
     </div>

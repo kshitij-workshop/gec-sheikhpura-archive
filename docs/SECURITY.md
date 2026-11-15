@@ -54,6 +54,14 @@ Phase 05 implements moderation and content governance:
 - Audit-log and analytics reads are administrative; audit rows stay append-only.
 - `GET /me/photos` exposes no delivery URLs, so pending and rejected assets stay unreachable through public image URLs.
 
+Phase 08 implements the member-facing account and contribution boundary:
+
+- Dashboard read models are scoped by the authenticated user in the repository query and add only display labels, ordered photographer credits, and moderation status. They do not add delivery URLs or Cloudinary identifiers.
+- The browser uploads directly to Cloudinary with a short-lived, single-use, server-bound authorization. The request sends no archive bearer token or cookie to the image host and never receives the Cloudinary API secret. The server still verifies every asset before creating a photo row.
+- The upload form requires an explicit photographer credit per file and never derives it from the uploader.
+- Accounts with `passwordChangeRequired` are redirected away from contributor pages, and the API enforces the same rule.
+- Password change and reset clear the in-memory access token and cached user after the server revokes refresh-token families, preventing a stale authenticated UI from outliving its session.
+
 This document records both the implemented baseline and the required target design.
 
 ## 2. Security principles

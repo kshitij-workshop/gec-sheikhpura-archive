@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router'
 
 import { AppShell } from './AppShell'
 import { RequireAuth } from './guards/RequireAuth'
+import { RequirePasswordReady } from './guards/RequirePasswordReady'
 import { RequireRole } from './guards/RequireRole'
 
 const HomePage = lazy(() => import('../features/home/HomePage'))
@@ -15,12 +16,38 @@ const ContributorsPage = lazy(
 )
 const AboutPage = lazy(() => import('../features/about/AboutPage'))
 const ContributePage = lazy(
-  () => import('../features/placeholders/ContributePage'),
+  () => import('../features/contributions/ContributePage'),
 )
 const SignInPage = lazy(() => import('../features/auth/SignInPage'))
-const DashboardPage = lazy(
-  () => import('../features/placeholders/DashboardPage'),
+const RegisterPage = lazy(() => import('../features/account/RegisterPage'))
+const VerifyEmailPage = lazy(
+  () => import('../features/account/VerifyEmailPage'),
 )
+const ForgotPasswordPage = lazy(
+  () => import('../features/account/ForgotPasswordPage'),
+)
+const ResetPasswordPage = lazy(
+  () => import('../features/account/ResetPasswordPage'),
+)
+const ChangePasswordPage = lazy(
+  () => import('../features/account/ChangePasswordPage'),
+)
+const DashboardLayout = lazy(
+  () => import('../features/dashboard/DashboardLayout'),
+)
+const DashboardPage = lazy(
+  () => import('../features/dashboard/DashboardPage'),
+)
+const MyUploadsPage = lazy(
+  () => import('../features/dashboard/MyUploadsPage'),
+)
+const SubmissionsPage = lazy(
+  () => import('../features/dashboard/SubmissionsPage'),
+)
+const SuggestionsPage = lazy(
+  () => import('../features/dashboard/SuggestionsPage'),
+)
+const ProfilePage = lazy(() => import('../features/dashboard/ProfilePage'))
 const AdminPage = lazy(() => import('../features/placeholders/AdminPage'))
 const ForbiddenPage = lazy(
   () => import('../features/placeholders/ForbiddenPage'),
@@ -44,11 +71,26 @@ export function AppRoutes() {
         <Route path="contributors" element={<ContributorsPage />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="sign-in" element={<SignInPage />} />
+        <Route path="register" element={<RegisterPage />} />
+        <Route path="verify-email" element={<VerifyEmailPage />} />
+        <Route path="forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="forbidden" element={<ForbiddenPage />} />
 
         <Route element={<RequireAuth />}>
-          <Route path="contribute" element={<ContributePage />} />
-          <Route path="dashboard" element={<DashboardPage />} />
+          {/* Reachable while a password change is still required. */}
+          <Route path="account/password" element={<ChangePasswordPage />} />
+
+          <Route element={<RequirePasswordReady />}>
+            <Route path="contribute" element={<ContributePage />} />
+            <Route path="dashboard" element={<DashboardLayout />}>
+              <Route index element={<DashboardPage />} />
+              <Route path="uploads" element={<MyUploadsPage />} />
+              <Route path="submissions" element={<SubmissionsPage />} />
+              <Route path="suggestions" element={<SuggestionsPage />} />
+              <Route path="profile" element={<ProfilePage />} />
+            </Route>
+          </Route>
         </Route>
 
         <Route

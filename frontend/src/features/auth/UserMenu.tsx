@@ -110,6 +110,24 @@ export function UserMenu() {
             >
               My dashboard
             </Link>
+            <Link
+              to="/dashboard/uploads"
+              onClick={() => {
+                setOpen(false)
+              }}
+              className="block rounded px-2 py-1.5 text-archive-muted hover:bg-stone-100 hover:text-archive-ink"
+            >
+              My uploads
+            </Link>
+            <Link
+              to="/dashboard/profile"
+              onClick={() => {
+                setOpen(false)
+              }}
+              className="block rounded px-2 py-1.5 text-archive-muted hover:bg-stone-100 hover:text-archive-ink"
+            >
+              Profile
+            </Link>
             {user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? (
               <Link
                 to="/admin"
