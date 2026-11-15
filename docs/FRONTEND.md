@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 06 established the frontend foundation: design tokens and shared components, the application shell and navigation, a session-aware API client, and the route table with guards. Phase 07 built the public website: home, archive with server-side filters and pagination, event and album pages with an accessible photo viewer, the contributor directory, About, and the sign-in form. Phase 08 adds the member experience: registration, email verification, password recovery, forced password rotation, the contribution upload flow, and dashboard views for uploads, submissions, event suggestions, and the profile. Phase 09 completes administration with the admin shell, photograph moderation queue, governance queues, archive management, and people/oversight pages.
+Phase 06 established the frontend foundation: design tokens and shared components, the application shell and navigation, a session-aware API client, and the route table with guards. Phase 07 built the public website: home, archive with server-side filters and pagination, event and album pages with an accessible photo viewer, the contributor directory, About, and the sign-in form. Phase 08 adds the member experience: registration, email verification, password recovery, forced password rotation, the contribution upload flow, and dashboard views for uploads, submissions, event suggestions, and the profile. Phase 09 completes administration with the admin shell, photograph moderation queue, governance queues, archive management, and people/oversight pages. Phase 10 begins release hardening with Playwright browser smoke tests and deployment verification.
 
 The frontend is a React 19 single-page application built with Vite and TypeScript. It is organised by feature, and every file that reaches the browser is public: no secret may be placed in `VITE_*` variables.
 
@@ -219,6 +219,8 @@ npm run lint
 npm run typecheck
 npm run test
 npm run build
+npm run e2e:install
+npm run e2e
 ```
 
 Vitest with jsdom and React Testing Library covers:
@@ -239,12 +241,14 @@ Vitest with jsdom and React Testing Library covers:
 - Photo viewer: opening, visible attribution, keyboard navigation, and Escape.
 - Presentation helpers: timezone-safe event dates, credit joining, alt-text fallback, Cloudinary delivery URLs and missing-configuration behaviour.
 - Design-system primitives: button loading state, field accessibility wiring, dialog open/close, pagination windowing, alert roles.
+- Playwright browser smoke tests: public shell/navigation, honest empty archive state, anonymous admin redirect, and keyboard focus visibility.
 
 `src/test/renderApp.tsx` renders the real shell and route table with a stubbed `AuthContext`. `src/test/setup.ts` installs a well-formed empty-archive `fetch` stub before each test; tests that need data replace it. Component tests must await lazy routes with `findBy*` queries.
 
 ## 10. Deferred work
 
 - Phase 09 is complete. Future work can improve bulk operations, richer editing forms, and dedicated detail views without changing the authorization boundary.
+- Phase 10 remaining work: real backend/SMTP/Cloudinary end-to-end journeys, visual regression coverage, deployment smoke checks, and static security analysis.
 - A user-facing list of own removal requests; the API currently supports creation only.
 - Contributor profile claiming and profile-edit permissions.
 - Standalone photograph pages and social preview metadata for shared links (later phase).

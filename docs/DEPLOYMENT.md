@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 00 covers local development and CI foundations. Production deployment is implemented in Phase 11.
+Phase 00 covers local development and CI foundations. Phase 10 adds browser smoke-test tooling and release verification. Production deployment is implemented in Phase 11.
 
 ## 2. Environments
 
@@ -49,6 +49,33 @@ cd frontend
 npm ci
 npm run dev
 ```
+
+### Browser smoke tests
+
+Install the pinned Chromium browser once:
+
+```bash
+cd frontend
+npm run e2e:install
+```
+
+Run the deterministic smoke suite. It starts Vite automatically and stubs
+public API reads, so it requires no credentials or production data:
+
+```bash
+npm run e2e
+```
+
+To run against an already deployed or locally running frontend instead of
+starting Vite, set `E2E_BASE_URL`:
+
+```bash
+E2E_BASE_URL=https://staging.example.com npm run e2e
+```
+
+Real registration, SMTP, Cloudinary upload, and moderation journeys are kept
+out of the default smoke suite until an isolated test database and provider
+credentials are supplied.
 
 ### Health checks
 
