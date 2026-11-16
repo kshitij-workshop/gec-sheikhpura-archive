@@ -130,12 +130,21 @@ is `false` so `/actuator/health` does not wait for the mail provider.
 
 | Variable | Purpose |
 |---|---|
-| `VITE_API_BASE_URL` | Usually `/api/v1` |
+| `VITE_API_BASE_URL` | Must be the relative path `/api/v1` (see the warning below) |
 | `VITE_CLOUDINARY_CLOUD_NAME` | Public Cloudinary cloud name |
 | `VITE_APP_ENV` | Environment label |
 | `VITE_GOOGLE_CLIENT_ID` | Same public client ID as `GOOGLE_CLIENT_ID`; empty hides the button |
 
 Never put secrets in `VITE_*` variables.
+
+`VITE_API_BASE_URL` must stay **relative** (`/api/v1`), so the browser calls the
+same origin it loaded the page from and Vercel's `/api/*` rewrite proxies the
+request to Render. Never set it to the Render origin: an absolute
+`https://<service>.onrender.com` value drops the `/api/v1` prefix, makes every
+request cross-origin (so CORS has to allow it and the refresh cookie becomes a
+third-party cookie browsers will not send back), and the API rejects the
+unprefixed paths with `401`. Vite inlines this value at build time, so changing
+it requires a new Vercel deployment.
 
 ### Google sign-in
 
@@ -151,7 +160,8 @@ store server-side.
 2. **APIs & Services → Credentials → Create credentials → OAuth client ID →
    Web application.**
 3. Authorized JavaScript origins (no paths, no trailing slash):
-   - `https://gec-sheikhpura-archive.vercel.app`
+   - `https://gecsarchive.vercel.app`
+   - `https://gec-sheikhpura-archive.vercel.app` (only if that alias still serves the site)
    - `http://localhost:5173`
 4. No authorized redirect URI is needed; the ID-token flow never redirects.
 5. Copy the client ID (it ends in `.apps.googleusercontent.com`).
