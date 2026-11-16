@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Card, PageHeader, SelectField, Skeleton, TextField, TextAreaField } from '../../components/ui'
 import { createAdminAlbum, createAdminCategory, createAdminEvent, createAdminYear, listAdminAlbums, listAdminCategories, listAdminEvents, listAdminYears, updateAdminAlbum, updateAdminEvent } from '../../lib/api/adminApi'
 import { requestFailureMessage } from '../../lib/api/errorMessage'
+import { AdminAlbumEditor } from './AdminAlbumEditor'
+import { AdminEventEditor } from './AdminEventEditor'
 
 export default function AdminArchiveManagementPage() {
   const client = useQueryClient()
@@ -13,6 +15,7 @@ export default function AdminArchiveManagementPage() {
   const [category, setCategory] = useState({ name: '', slug: '', description: '' })
   const [event, setEvent] = useState({ title: '', eventDate: '', academicYearId: '', categoryId: '', location: '' })
   const [album, setAlbum] = useState({ eventId: '', title: '' })
+  const [editingEventId, setEditingEventId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const save = useMutation({ mutationFn: async (input: { type: string; body: unknown }) => { if (input.type === 'year') return createAdminYear(input.body); if (input.type === 'category') return createAdminCategory(input.body); if (input.type === 'album') return createAdminAlbum(input.body); return createAdminEvent(input.body) }, onSuccess: (_data, input) => { setNotice(`${input.type[0]!.toUpperCase()}${input.type.slice(1)} created.`); void client.invalidateQueries({ queryKey: ['admin'] }) } })
   const togglePublish = useMutation({
@@ -48,13 +51,15 @@ export default function AdminArchiveManagementPage() {
       <Card className="space-y-3 p-5"><h2 className="font-serif text-xl font-semibold">Events</h2><TextField label="Title" id="event-title" value={event.title} onChange={(e) => setEvent({ ...event, title: e.target.value })} /><SelectField label="Academic year" id="event-year" value={event.academicYearId} onChange={(e) => setEvent({ ...event, academicYearId: e.target.value })}><option value="">Choose a year</option>{years.data?.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</SelectField><SelectField label="Category" id="event-category" value={event.categoryId} onChange={(e) => setEvent({ ...event, categoryId: e.target.value })}><option value="">Choose a category</option>{categories.data?.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectField><TextField label="Event date" id="event-date" type="date" value={event.eventDate} onChange={(e) => setEvent({ ...event, eventDate: e.target.value })} /><TextField label="Location" id="event-location" optional value={event.location} onChange={(e) => setEvent({ ...event, location: e.target.value })} /><Button type="button" isLoading={save.isPending} onClick={() => save.mutate({ type: 'event', body: { ...event, published: false, featured: false } })}>Add draft event</Button></Card>
     </div>
     <Card className="space-y-3 p-5"><h2 className="font-serif text-xl font-semibold">Albums</h2><div className="grid gap-3 md:grid-cols-3"><SelectField label="Event" id="album-event" value={album.eventId} onChange={(e) => setAlbum({ ...album, eventId: e.target.value })}><option value="">Choose an event</option>{events.data?.items.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</SelectField><TextField label="Title" id="album-title" value={album.title} onChange={(e) => setAlbum({ ...album, title: e.target.value })} /><div className="flex items-end"><Button type="button" isLoading={save.isPending} onClick={() => save.mutate({ type: 'album', body: { ...album, published: false, sortOrder: 0 } })}>Add draft album</Button></div></div>{events.data?.items.map((item) => <AlbumList key={item.id} eventId={item.id} />)}</Card>
-    <Card className="space-y-3 p-5"><h2 className="font-serif text-xl font-semibold">Events and publication</h2>{events.isPending ? <Skeleton className="h-28 w-full" /> : <ul className="divide-y divide-archive-line">{events.data?.items.map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="font-medium">{item.title}</p><p className="text-sm text-archive-muted">{item.eventDate} · {item.published ? 'Published' : 'Draft'} · {item.albums.length} albums</p></div><Button type="button" size="sm" variant={item.published ? 'secondary' : 'primary'} isLoading={togglePublish.isPending} onClick={() => togglePublish.mutate({ id: item.id, published: !item.published })}>{item.published ? 'Unpublish' : 'Publish'}</Button></li>)}</ul>}</Card>
+    <Card className="space-y-3 p-5"><h2 className="font-serif text-xl font-semibold">Events and publication</h2>{events.isPending ? <Skeleton className="h-28 w-full" /> : <ul className="divide-y divide-archive-line">{events.data?.items.map((item) => <li key={item.id} className="py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-medium">{item.title}</p><p className="text-sm text-archive-muted">{item.eventDate} · {item.published ? 'Published' : 'Draft'} · {item.albums.length} albums</p></div><div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="ghost" onClick={() => setEditingEventId(editingEventId === item.id ? null : item.id)}>{editingEventId === item.id ? 'Close editor' : 'Edit details'}</Button><Button type="button" size="sm" variant={item.published ? 'secondary' : 'primary'} isLoading={togglePublish.isPending} onClick={() => togglePublish.mutate({ id: item.id, published: !item.published })}>{item.published ? 'Unpublish' : 'Publish'}</Button></div></div>{editingEventId === item.id ? <AdminEventEditor event={item} years={years.data ?? []} categories={categories.data ?? []} onClose={() => setEditingEventId(null)} /> : null}</li>)}</ul>}</Card>
   </div>
 }
 
 function AlbumList({ eventId }: { eventId: string }) {
   const client = useQueryClient()
-  const albums = useQuery({ queryKey: ['admin', 'albums', eventId], queryFn: () => listAdminAlbums(eventId) })
+  const albumKey = ['admin', 'albums', eventId]
+  const albums = useQuery({ queryKey: albumKey, queryFn: () => listAdminAlbums(eventId) })
+  const [editingAlbumId, setEditingAlbumId] = useState<string | null>(null)
   const publish = useMutation({
     mutationFn: (album: { id: string; published: boolean }) => {
       const current = albums.data?.find((item) => item.id === album.id)
@@ -62,14 +67,13 @@ function AlbumList({ eventId }: { eventId: string }) {
       return updateAdminAlbum(album.id, {
         eventId: current.eventId,
         title: current.title,
-        slug: current.slug,
         description: current.description,
         published: album.published,
         sortOrder: current.sortOrder,
       })
     },
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ['admin', 'albums', eventId] })
+      void client.invalidateQueries({ queryKey: albumKey })
       void client.invalidateQueries({ queryKey: ['admin', 'events'] })
     },
   })
@@ -78,5 +82,5 @@ function AlbumList({ eventId }: { eventId: string }) {
   if (albums.isError) return <p className="border-t border-archive-line pt-3 text-sm text-archive-danger">Albums could not be loaded.</p>
   if (albums.data.length === 0) return null
 
-  return <ul className="divide-y divide-archive-line border-t border-archive-line">{albums.data.map((album) => <li key={album.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="font-medium">{album.title}</p><p className="text-sm text-archive-muted">{album.published ? 'Published' : 'Draft'} · {album.slug}</p></div><Button type="button" size="sm" variant={album.published ? 'secondary' : 'primary'} isLoading={publish.isPending} onClick={() => publish.mutate({ id: album.id, published: !album.published })}>{album.published ? 'Unpublish album' : 'Publish album'}</Button></li>)}</ul>
+  return <ul className="divide-y divide-archive-line border-t border-archive-line">{albums.data.map((album) => <li key={album.id} className="py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-medium">{album.title}</p><p className="text-sm text-archive-muted">{album.published ? 'Published' : 'Draft'} · {album.slug}</p></div><div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="ghost" onClick={() => setEditingAlbumId(editingAlbumId === album.id ? null : album.id)}>{editingAlbumId === album.id ? 'Close editor' : 'Edit album'}</Button><Button type="button" size="sm" variant={album.published ? 'secondary' : 'primary'} isLoading={publish.isPending} onClick={() => publish.mutate({ id: album.id, published: !album.published })}>{album.published ? 'Unpublish album' : 'Publish album'}</Button></div></div>{editingAlbumId === album.id ? <AdminAlbumEditor album={album} onSaved={() => setEditingAlbumId(null)} onCancel={() => setEditingAlbumId(null)} /> : null}</li>)}</ul>
 }

@@ -195,7 +195,11 @@ public class ArchiveAdminService {
     @Transactional
     public AlbumResponse createAlbum(AlbumRequest request, AuthenticatedUser actor, ClientInfo client) {
         Event event = event(request.eventId());
-        String slug = uniqueSlug(request.slug(), request.title(), albums::findBySlug);
+        String title = request.title().trim();
+        if (albums.existsByEvent_IdAndTitleIgnoreCaseAndDeletedAtIsNull(event.getId(), title)) {
+            throw new ConflictException("This event already has an album with this title.");
+        }
+        String slug = albumSlug(request.slug(), title);
         Album album = new Album();
         album.setEvent(event);
         album.setCreatedBy(user(actor.id()));
@@ -210,6 +214,10 @@ public class ArchiveAdminService {
     public AlbumResponse updateAlbum(UUID id, AlbumRequest request, AuthenticatedUser actor, ClientInfo client) {
         Album album = album(id);
         Event event = event(request.eventId());
+        String title = request.title().trim();
+        if (albums.existsByEvent_IdAndTitleIgnoreCaseAndDeletedAtIsNullAndIdNot(event.getId(), title, id)) {
+            throw new ConflictException("This event already has an album with this title.");
+        }
         String slug = request.slug() == null || request.slug().isBlank() ? album.getSlug() : Slugs.normalize(request.slug());
         albums.findBySlug(slug).filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> { throw new ConflictException("An album with this slug already exists."); });
@@ -310,6 +318,29 @@ public class ArchiveAdminService {
         String value = slug(requested, fallback);
         if (lookup.apply(value).isPresent()) throw new ConflictException("A resource with this slug already exists.");
         return value;
+    }
+
+    /**
+     * Album slugs are public URLs, so they stay globally unique even though
+     * album titles only need to be unique within their event. A generated slug
+     * is disambiguated with a numeric suffix; an explicitly requested slug is
+     * rejected on collision so the administrator sees the conflict.
+     */
+    private String albumSlug(String requested, String title) {
+        if (requested != null && !requested.isBlank()) {
+            return uniqueSlug(requested, title, albums::findBySlug);
+        }
+        String base = slug(null, title);
+        if (albums.findBySlug(base).isEmpty()) {
+            return base;
+        }
+        for (int suffix = 2; suffix <= 100; suffix++) {
+            String candidate = base + "-" + suffix;
+            if (albums.findBySlug(candidate).isEmpty()) {
+                return candidate;
+            }
+        }
+        throw new ConflictException("Could not derive a unique album slug. Supply one explicitly.");
     }
 
     private void ensureCategoryUnique(String name, String slug, UUID currentId) {

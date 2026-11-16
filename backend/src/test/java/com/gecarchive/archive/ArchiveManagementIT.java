@@ -197,6 +197,76 @@ class ArchiveManagementIT extends AbstractAuthIntegrationTest {
                 .andExpect(status().isConflict());
     }
 
+    @Test
+    void albumTitlesAreUniquePerEventButReusableAcrossEvents() throws Exception {
+        String email = uniqueEmail("album-titles");
+        User admin = createActiveUser(email, defaultPassword(), Role.ADMIN);
+        String token = accessToken(login(email, defaultPassword()));
+        AcademicYear year = createYear("2024-2025", LocalDate.of(2024, 7, 1), LocalDate.of(2025, 6, 30));
+        Category category = createCategory("Dandiya", "dandiya");
+        Event dandiya2024 = createEvent(year, category, admin, "Dandiya 2024", "dandiya-2024", false);
+        Event dandiya2025 = createEvent(year, category, admin, "Dandiya 2025", "dandiya-2025", false);
+
+        String firstAlbum = """
+                {"eventId":"%s","title":"2K24 Batch"}
+                """.formatted(dandiya2024.getId());
+        mockMvc.perform(post("/api/v1/admin/albums").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content(firstAlbum))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.slug").value("2k24-batch"));
+
+        // The same title in a different event is allowed and gets its own slug.
+        mockMvc.perform(post("/api/v1/admin/albums").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"eventId":"%s","title":"2K24 Batch"}
+                                """.formatted(dandiya2025.getId())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.slug").value("2k24-batch-2"))
+                .andExpect(jsonPath("$.title").value("2K24 Batch"));
+
+        // The same title twice inside one event is rejected.
+        mockMvc.perform(post("/api/v1/admin/albums").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"eventId":"%s","title":"2K24 BATCH"}
+                                """.formatted(dandiya2024.getId())))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void adminsCanRenameEventsAndAlbums() throws Exception {
+        String email = uniqueEmail("rename");
+        User admin = createActiveUser(email, defaultPassword(), Role.ADMIN);
+        String token = accessToken(login(email, defaultPassword()));
+        AcademicYear year = createYear("2023-2024", LocalDate.of(2023, 7, 1), LocalDate.of(2024, 6, 30));
+        Category category = createCategory("Athletics", "athletics");
+        Event event = createEvent(year, category, admin, "Inter House Sports", "inter-house-sports", false);
+        var album = createAlbum(event, admin, "Track Events", "track-events", false);
+
+        mockMvc.perform(patch("/api/v1/admin/events/" + event.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"academicYearId":"%s","categoryId":"%s","title":"Annual Sports Day",
+                                 "description":"Updated description","eventDate":"%s","location":"Main ground"}
+                                """.formatted(year.getId(), category.getId(), event.getEventDate())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Annual Sports Day"))
+                .andExpect(jsonPath("$.location").value("Main ground"));
+
+        mockMvc.perform(patch("/api/v1/admin/albums/" + album.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"eventId":"%s","title":"Athletics","description":"Relay and sprints","sortOrder":2}
+                                """.formatted(event.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Athletics"))
+                .andExpect(jsonPath("$.description").value("Relay and sprints"))
+                .andExpect(jsonPath("$.sortOrder").value(2));
+    }
+
     private User adminUser() {
         return createActiveUser(uniqueEmail("helper-admin"), defaultPassword(), Role.ADMIN);
     }

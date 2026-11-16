@@ -292,6 +292,8 @@ Own submissions, own photographs, and own event suggestions carry the display la
 | `POST` | `/api/v1/admin/albums` | Implemented | Create album |
 | `PATCH` | `/api/v1/admin/albums/{id}` | Implemented | Update/publish album |
 | `DELETE` | `/api/v1/admin/albums/{id}` | Implemented | Archive album |
+
+Album titles must be unique within one event and may repeat across events; the title is compared case-insensitively and archived albums release their title. Album slugs stay globally unique because they are public URLs: a generated slug is disambiguated with a numeric suffix (`2k24-batch`, `2k24-batch-2`), while an explicitly supplied colliding slug returns `409`. `PATCH /admin/albums/{id}` keeps the previous slug when `slug` is omitted, so renaming a title never breaks a shared link.
 | `GET` | `/api/v1/admin/moderation/photos` | Implemented | Moderation queue, optionally filtered by `status` |
 | `GET` | `/api/v1/admin/photos/{id}/moderation-history` | Implemented | Append-only transition history |
 | `POST` | `/api/v1/admin/photos/{id}/approve` | Implemented | Approve, assigning an album when absent |

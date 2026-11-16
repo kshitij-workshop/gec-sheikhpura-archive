@@ -20,6 +20,10 @@ public interface AlbumRepository extends JpaRepository<Album, UUID> {
 
     List<Album> findByEvent_IdOrderBySortOrderAsc(UUID eventId);
 
+    boolean existsByEvent_IdAndTitleIgnoreCaseAndDeletedAtIsNull(UUID eventId, String title);
+
+    boolean existsByEvent_IdAndTitleIgnoreCaseAndDeletedAtIsNullAndIdNot(UUID eventId, String title, UUID id);
+
     long countByDeletedAtIsNull();
 
     long countByPublishedTrueAndDeletedAtIsNull();
