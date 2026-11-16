@@ -6,12 +6,14 @@ import com.gecarchive.auth.config.AuthProperties;
 import com.gecarchive.user.entity.User;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
@@ -89,6 +91,30 @@ class BrevoHttpAuthMailSenderTest {
 
         assertDoesNotThrow(() -> sender.sendVerificationEmail(user(), "token-123"));
         server.verify();
+    }
+
+    /**
+     * Regression guard: the production deploy failed with
+     * "No default constructor found" because the class has a second constructor
+     * for tests, so Spring could not choose one. Booting a real container with
+     * the {@code prod} profile is the only way to prove this wiring works, since
+     * the sender is only created under that profile.
+     */
+    @Test
+    void springCanInstantiateTheSenderFromItsAnnotatedConstructor() {
+        try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+            context.getEnvironment().setActiveProfiles("prod");
+            context.getBeanFactory().registerSingleton("mailDeliveryProperties",
+                    props("test-api-key", "archive@example.com"));
+            context.getBeanFactory().registerSingleton("authProperties",
+                    new AuthProperties(null, null, null, "https://frontend.example", null, null));
+            context.getBeanFactory().registerSingleton("mailTaskExecutor", sameThread);
+            context.registerBean(BrevoHttpAuthMailSender.class);
+
+            context.refresh();
+
+            assertThat(context.getBean(BrevoHttpAuthMailSender.class)).isNotNull();
+        }
     }
 
     private BrevoHttpAuthMailSender sender(MailDeliveryProperties mail, RestClient client) {

@@ -10,6 +10,7 @@ import com.gecarchive.user.entity.User;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpHeaders;
@@ -47,6 +48,12 @@ public class BrevoHttpAuthMailSender implements AuthMailSender {
     private final Executor executor;
     private final RestClient client;
 
+    /**
+     * Spring wiring entry point. This class has a second, package-private
+     * constructor for tests (which injects a mocked {@link RestClient}), so the
+     * container needs an explicit marker to know which one to use.
+     */
+    @Autowired
     public BrevoHttpAuthMailSender(
             MailDeliveryProperties mail,
             AuthProperties properties,
@@ -54,6 +61,7 @@ public class BrevoHttpAuthMailSender implements AuthMailSender {
         this(mail, properties, executor, defaultClient());
     }
 
+    /** Visible for tests: bypasses the real HTTP client. */
     BrevoHttpAuthMailSender(
             MailDeliveryProperties mail,
             AuthProperties properties,
