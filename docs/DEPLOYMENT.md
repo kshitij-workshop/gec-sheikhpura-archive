@@ -86,7 +86,7 @@ open http://localhost:8025
 
 ## 5. Required configuration
 
-Names are indicative and will be finalized as features are implemented.
+Names match `backend/src/main/resources/application.yml` exactly.
 
 ### Backend
 
@@ -97,21 +97,33 @@ Names are indicative and will be finalized as features are implemented.
 | `DB_USERNAME` | Database user |
 | `DB_PASSWORD` | Database password |
 | `DB_POOL_MAX_SIZE` | Hikari maximum pool size |
-| `CORS_ALLOWED_ORIGINS` | Explicit frontend origin allowlist |
-| `JWT_SIGNING_KEY` | Access-token signing secret/key |
-| `REFRESH_TOKEN_PEPPER` | Additional refresh-token hashing secret |
+| `CORS_ALLOWED_ORIGINS` | Explicit frontend origin allowlist (comma separated, no trailing slash) |
+| `APP_JWT_SECRET` | Access-token signing secret (at least 32 bytes) |
+| `APP_JWT_ISSUER` | Issuer claim, usually the backend base URL |
+| `APP_FRONTEND_BASE_URL` | Public frontend URL used in verification and reset links |
+| `APP_REFRESH_COOKIE_SECURE` | `true` in production |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
-| `MAIL_HOST` | SMTP host |
-| `MAIL_PORT` | SMTP port |
-| `MAIL_USERNAME` | SMTP username |
-| `MAIL_PASSWORD` | SMTP password |
-| `BREVO_API_KEY` | Brevo HTTPS API key used by the production profile |
-| `MAIL_FROM` | Verified Brevo sender email |
+| `CLOUDINARY_UPLOAD_PRESET` | Signed upload preset |
+| `CLOUDINARY_UPLOAD_FOLDER` | Upload folder |
+| `BREVO_API_KEY` | Brevo **API key** (not an SMTP key); used by the production profile over HTTPS |
+| `MAIL_FROM` | Sender address verified in Brevo |
 | `MAIL_FROM_NAME` | Sender display name |
-| `APP_PUBLIC_URL` | Public frontend URL for links |
-| `APP_CORS_ALLOWED_ORIGINS` | Allowed browser origins |
+| `MAIL_HOST` / `MAIL_PORT` | SMTP host/port; development only |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP credentials; development only |
+| `MAIL_SMTP_CONNECTION_TIMEOUT` | SMTP connect timeout in ms (default `5000`) |
+| `MAIL_SMTP_READ_TIMEOUT` | SMTP read timeout in ms (default `10000`) |
+| `MAIL_SMTP_WRITE_TIMEOUT` | SMTP write timeout in ms (default `10000`) |
+
+Production mail uses `https://api.brevo.com/v3/smtp/email` on port 443 because
+Render Free blocks outbound SMTP ports. `BREVO_API_KEY` must be created under
+Brevo → SMTP & API → **API Keys**; an SMTP key is rejected with HTTP `401`.
+`MAIL_FROM` must be an address or domain verified under Brevo → Senders.
+
+Delivery never blocks an API request: messages are rendered on the request
+thread and sent on a two-thread daemon pool. `management.health.mail.enabled`
+is `false` so `/actuator/health` does not wait for the mail provider.
 
 ### Frontend
 
