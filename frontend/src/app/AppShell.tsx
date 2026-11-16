@@ -3,6 +3,8 @@ import { Link, NavLink, Outlet } from 'react-router'
 
 import { buttonStyles } from '../components/ui/buttonStyles'
 import { UserMenu } from '../features/auth/UserMenu'
+import { ArchiveStats } from '../features/home/ArchiveStats'
+import { useRecordVisit } from '../features/home/publicStats'
 import { appConfig } from '../lib/config'
 import { RouteFallback } from './RouteFallback'
 
@@ -25,6 +27,7 @@ function navLinkClasses({ isActive }: { isActive: boolean }): string {
 
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  useRecordVisit()
 
   const closeMobileNavigation = () => {
     setMobileOpen(false)
@@ -195,11 +198,14 @@ export function AppShell() {
         </div>
 
         <div className="border-t border-archive-line">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 py-5 text-sm text-archive-muted sm:flex-row sm:items-center sm:justify-between">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-5 text-sm text-archive-muted sm:flex-row sm:items-center sm:justify-between">
             <p>
               © {new Date().getFullYear()} {appConfig.name}
             </p>
-            <p>Preserved with care by the college community.</p>
+            <div className="space-y-1 sm:text-right">
+              <ArchiveStats />
+              <p>Preserved with care by the college community.</p>
+            </div>
           </div>
         </div>
       </footer>

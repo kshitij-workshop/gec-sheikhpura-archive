@@ -94,33 +94,32 @@ describe('HomePage', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows aggregate archive activity counters', async () => {
+  it('shows archive activity in the footer', async () => {
     stubHome()
 
     renderApp({ path: '/' })
 
-    expect(await screen.findByText('Archive visitors')).toBeInTheDocument()
-    expect(await screen.findByText('1,234')).toBeInTheDocument()
-    expect(screen.getByText('Visitors today')).toBeInTheDocument()
-    expect(screen.getByText('Registered members')).toBeInTheDocument()
-    expect(screen.getByText('Signed in now')).toBeInTheDocument()
-    expect(
-      screen.getByText('Active in the last 30 minutes'),
-    ).toBeInTheDocument()
+    const footer = screen.getByRole('contentinfo')
+    await waitFor(() =>
+      expect(footer).toHaveTextContent('1,234 visitors'),
+    )
+    expect(footer).toHaveTextContent('12 today')
+    expect(footer).toHaveTextContent('87 members')
+    expect(footer).toHaveTextContent('3 signed in')
+    expect(footer).toHaveTextContent(
+      'Preserved with care by the college community.',
+    )
   })
 
-  it('records one anonymous visit per browser per day', async () => {
-    window.localStorage.clear()
-    const fetchMock = stubHome()
+  it('keeps photographs and counters out of the page body', async () => {
+    stubHome()
 
     renderApp({ path: '/' })
 
-    await waitFor(() => {
-      const visits = fetchMock.mock.calls.filter(([input]) =>
-        requestPath(input).endsWith('/public-stats/visits'),
-      )
-      expect(visits).toHaveLength(1)
-    })
-    expect(window.localStorage.getItem('gecs.last-visit-day')).not.toBeNull()
+    await screen.findByRole('link', { name: 'Founders Day' })
+
+    expect(screen.queryByText('Archive visitors')).not.toBeInTheDocument()
+    expect(screen.queryByText('Visitors today')).not.toBeInTheDocument()
+    expect(screen.queryByText('Registered members')).not.toBeInTheDocument()
   })
 })

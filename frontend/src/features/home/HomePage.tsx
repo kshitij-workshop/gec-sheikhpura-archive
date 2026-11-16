@@ -11,8 +11,6 @@ import {
 } from '../../components/ui'
 import { EventCard } from '../archive/components/EventCard'
 import { useAcademicYears, useEvents } from '../archive/queries'
-import { ArchiveStats } from './ArchiveStats'
-import { useRecordVisit } from './publicStats'
 
 const values = [
   {
@@ -54,7 +52,6 @@ export default function HomePage() {
   const featured = useEvents({ featured: true, size: 3 })
   const latest = useEvents({ size: 6 })
   const years = useAcademicYears()
-  useRecordVisit()
 
   const archiveUnavailable = featured.isError || latest.isError
 
@@ -85,8 +82,6 @@ export default function HomePage() {
           the archive page or try again in a moment.
         </Alert>
       ) : null}
-
-      <ArchiveStats />
 
       <section aria-labelledby="featured-heading" className="space-y-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">

@@ -1,7 +1,11 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
+import {
+  defaultFetchStub,
+  requestPath,
+} from '../test/fetchStub'
 import {
   anonymousAuth,
   authForRole,
@@ -262,5 +266,21 @@ describe('route guards', () => {
         name: 'Change your password',
       }),
     ).toBeInTheDocument()
+  })
+
+  it('records one anonymous visit per browser per day', async () => {
+    window.localStorage.clear()
+    const fetchMock = vi.fn(defaultFetchStub)
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderApp()
+
+    await waitFor(() => {
+      const visits = fetchMock.mock.calls.filter(([input]) =>
+        requestPath(input).endsWith('/public-stats/visits'),
+      )
+      expect(visits).toHaveLength(1)
+    })
+    expect(window.localStorage.getItem('gecs.last-visit-day')).not.toBeNull()
   })
 })
