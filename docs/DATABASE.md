@@ -198,6 +198,14 @@ Public APIs must apply this predicate consistently once domain endpoints are imp
 - Cleared on password change or password reset.
 - When true, the API blocks every endpoint except profile read, password change, CSRF, refresh, and logout.
 
+`users.google_subject` and credentials:
+
+- `google_subject` stores Google's stable `sub` claim, never an email address.
+- A partial unique index enforces one account per Google subject, only for rows where it is present.
+- `password_hash` is nullable so a Google-only account exists without a fake password.
+- `users_credential_check` requires at least one credential: `password_hash IS NOT NULL OR google_subject IS NOT NULL`.
+- `google_subject` is never exposed by the API; `UserResponse` does not include it.
+
 `upload_authorizations`:
 
 - Stores a server-generated Cloudinary `public_id`, signature, timestamp, expiry, user, and submission.
@@ -227,6 +235,7 @@ Public APIs must apply this predicate consistently once domain endpoints are imp
 Phase 01 creates indexes for known access paths:
 
 - `users (lower(email))` unique.
+- `users (google_subject)` unique where `google_subject IS NOT NULL`.
 - `refresh_tokens (token_hash)` unique, `(user_id)`, `(family_id)`.
 - `auth_tokens (token_hash)` unique.
 - `auth_tokens (user_id, purpose, created_at desc)`.

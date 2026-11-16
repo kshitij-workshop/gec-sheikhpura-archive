@@ -105,6 +105,10 @@ app:
       forgot-password-window: ${APP_RATE_LIMIT_FORGOT_WINDOW:1h}
       reset-password-per-ip: ${APP_RATE_LIMIT_RESET_PER_IP:5}
       reset-password-window: ${APP_RATE_LIMIT_RESET_WINDOW:1h}
+  google:
+    # Public OAuth client ID for Google Identity Services. Empty disables the
+    # feature: the frontend hides its button and POST /auth/google returns 503.
+    client-id: ${GOOGLE_CLIENT_ID:}
   upload:
     max-file-size-bytes: ${APP_UPLOAD_MAX_FILE_SIZE_BYTES:15728640}
     max-photos-per-submission: ${APP_UPLOAD_MAX_PHOTOS_PER_SUBMISSION:50}

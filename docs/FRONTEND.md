@@ -134,6 +134,8 @@ Public reads live in `lib/api/archiveApi.ts` and are issued with `auth: false`, 
 
 The sign-in form validates credentials in the browser, posts to `/auth/login`, and continues to the guard-recorded destination. It only accepts same-origin paths as a redirect target, and it returns the same message for an unknown email and a wrong password.
 
+When `VITE_GOOGLE_CLIENT_ID` is set, `GoogleSignInButton` loads Google Identity Services, renders Google's own button, and posts the returned ID token to `/auth/google`. The component renders nothing without a client ID, so local and preview builds without Google credentials look unchanged. The backend remains the only authority on whether a Google account may sign in.
+
 ## 6. Member experience
 
 ### Account lifecycle

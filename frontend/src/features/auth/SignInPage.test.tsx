@@ -104,4 +104,58 @@ describe('SignInPage', () => {
       screen.getByRole('link', { name: 'Go to your dashboard' }),
     ).toHaveAttribute('href', '/dashboard')
   })
+
+  it('hides Google sign-in when the deployment has no client id', () => {
+    vi.stubEnv('VITE_GOOGLE_CLIENT_ID', '')
+
+    renderSignIn()
+
+    expect(screen.queryByText('or use your email')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Sign in with Google' }),
+    ).not.toBeInTheDocument()
+
+    vi.unstubAllEnvs()
+  })
+
+  it('offers Google sign-in beside the email form when configured', async () => {
+    vi.stubEnv('VITE_GOOGLE_CLIENT_ID', '1234-example.apps.googleusercontent.com')
+    const calls: Array<{ callback: (response: { credential?: string }) => void }> = []
+    ;(window as unknown as { google?: unknown }).google = {
+      accounts: {
+        id: {
+          initialize: (options: { callback: (response: { credential?: string }) => void }) => {
+            calls.push(options)
+          },
+          renderButton: (parent: HTMLElement) => {
+            const button = document.createElement('button')
+            button.type = 'button'
+            button.textContent = 'Sign in with Google'
+            button.addEventListener('click', () => {
+              calls.at(-1)?.callback({ credential: 'google-id-token' })
+            })
+            parent.appendChild(button)
+          },
+        },
+      },
+    }
+    const loginWithGoogle = vi.fn().mockResolvedValue(undefined)
+
+    try {
+      renderSignIn(makeAuth({ loginWithGoogle }), '/contribute')
+
+      expect(await screen.findByText('or use your email')).toBeInTheDocument()
+      await userEvent
+        .setup()
+        .click(await screen.findByRole('button', { name: 'Sign in with Google' }))
+
+      await waitFor(() => {
+        expect(loginWithGoogle).toHaveBeenCalledWith('google-id-token')
+      })
+      expect(await screen.findByText('Contribute page')).toBeInTheDocument()
+    } finally {
+      delete (window as unknown as { google?: unknown }).google
+      vi.unstubAllEnvs()
+    }
+  })
 })

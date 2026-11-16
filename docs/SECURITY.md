@@ -216,6 +216,42 @@ Password hashes, refresh tokens, and email/reset tokens are never logged or retu
 - Route guards are usability only. The API authorizes every request, and a modified client cannot widen its permissions.
 - See `docs/FRONTEND.md` and ADR-0020.
 
+### 5.9 Google sign-in
+
+Google sign-in uses the Google Identity Services **ID-token flow**, so this
+application has no OAuth client secret and performs no authorization-code
+exchange.
+
+- The browser receives a short-lived ID token from Google and posts it to
+  `POST /api/v1/auth/google`. The token is verified server-side and never stored
+  or written to the audit log.
+- Verification fetches Google's JWKS from `https://www.googleapis.com/oauth2/v3/certs`
+  and enforces: signature, `exp`/`nbf`, issuer (`https://accounts.google.com` or
+  `accounts.google.com`), audience equal to this deployment's client ID,
+  non-empty `email`, non-empty `sub`, and `email_verified = true`.
+- `GOOGLE_CLIENT_ID` is a public identifier, not a secret. It belongs in the
+  Render environment for the backend and `VITE_GOOGLE_CLIENT_ID` for the Vercel
+  build. No client secret exists to leak.
+- Linking rules:
+  - A known Google `sub` signs into the account it is bound to.
+  - Otherwise an account with the same email is linked **only** because Google
+    asserts the address is verified — the same trust a clicked verification link
+    carries. A `PENDING_VERIFICATION` account becomes `ACTIVE`.
+  - Otherwise a new `ACTIVE` account is created with `password_hash = NULL`.
+  - Linking never changes a role, never touches an account bound to a different
+    Google `sub` (that is a `409`), and never revives `SUSPENDED` or
+    `DEACTIVATED` accounts (that is a `401`).
+- Password login for an account without a password hash is rejected with the
+  same generic `401` as a wrong password, using the timing-equalizer hash so the
+  response time does not reveal whether the account exists.
+- An account can still obtain a password by using "Forgot password"; the reset
+  token is delivered to the verified mailbox.
+- Google sign-in is rate-limited per IP and per Google `sub` with the same
+  windows as password login, and every successful sign-in writes a
+  `USER_SIGNED_IN_WITH_GOOGLE` audit record containing only booleans.
+- With no client ID configured the endpoint answers `503` and the frontend
+  renders no button, so the feature cannot be half-enabled.
+
 ## 6. CSRF and CORS
 
 ### CSRF
@@ -323,7 +359,7 @@ Apply limits to:
 
 Use per-account and per-IP limits. Avoid account-lockout designs that let an attacker deny service to a known account. Return `429` with `Retry-After`. Document the single-instance limitation if an in-memory limiter is used.
 
-**Phase 02 implementation:** a fixed-window in-memory limiter protects login (per IP and per account), registration and resend-verification (per IP), forgot-password (per account and per IP), and reset-password (per IP). Counters live in the JVM, so the limit applies per backend instance. A multi-instance deployment must replace it with a shared counter store before scaling out; this is an accepted Phase 02 limitation.
+**Phase 02 implementation:** a fixed-window in-memory limiter protects login (per IP and per account), Google sign-in (per IP and per Google subject), registration and resend-verification (per IP), forgot-password (per account and per IP), and reset-password (per IP). Counters live in the JVM, so the limit applies per backend instance. A multi-instance deployment must replace it with a shared counter store before scaling out; this is an accepted Phase 02 limitation.
 
 ## 11. Audit logging
 
@@ -337,6 +373,7 @@ Audit at least:
 - Event suggestion decisions.
 - System setting changes.
 - Bootstrap of the first super administrator.
+- Google sign-in, including whether the account was created or linked during the sign-in.
 
 Audit records are append-only and must not contain passwords, tokens, or secrets.
 
@@ -397,6 +434,10 @@ Phase 02 covers the authentication and authorization items below with automated 
 - Upload authorization is bound to the user and submission and cannot be reused. ✅ `UploadIntegrationIT`
 - Unverified or invalid Cloudinary assets cannot become photo records. ✅ `UploadIntegrationIT`
 - Validation rejects oversized, unsupported, and malformed input. ✅ auth DTOs
+- Google sign-in never accepts an unverified email, a foreign audience, or a suspended account. ✅ `GoogleSignInIT`, `GoogleIdTokenClaimsValidatorTest`
+- Google sign-in cannot bind an address owned by a different Google account, and linking never changes a role. ✅ `GoogleSignInIT`, `GoogleSignInServiceTest`
+- Google sign-in cannot be half-enabled: without a client ID the API answers `503`. ✅ `GoogleSignInNotConfiguredIT`
+- An account without a password cannot sign in through the password form. ✅ `GoogleSignInIT`
 - Error responses do not leak stack traces or secrets. ✅ problem-detail handlers
 
 ## 16. Incident response

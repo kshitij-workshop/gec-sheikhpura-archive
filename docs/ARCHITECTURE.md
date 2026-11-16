@@ -39,7 +39,7 @@ flowchart LR
 
 ```text
 com.gecarchive
-├── auth
+├── auth            registration, login, sessions, Google ID-token verification
 ├── user
 ├── event
 ├── album

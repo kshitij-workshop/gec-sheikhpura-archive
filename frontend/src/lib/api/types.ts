@@ -35,6 +35,11 @@ export interface LoginInput {
   password: string
 }
 
+/** The ID token issued by Google Identity Services in the browser. */
+export interface GoogleSignInInput {
+  idToken: string
+}
+
 /** Consistent page envelope returned by every collection endpoint. */
 export interface PageResponse<T> {
   items: T[]

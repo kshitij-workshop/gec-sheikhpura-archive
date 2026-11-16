@@ -8,7 +8,7 @@ import {
   clearSession as clearApiSession,
 } from '../../lib/api/client'
 import type { LoginInput, User } from '../../lib/api/types'
-import { loginRequest } from './authApi'
+import { loginRequest, googleSignInRequest } from './authApi'
 import { AuthContext } from './authContext'
 import type { AuthState, AuthStatus } from './authContext'
 
@@ -55,6 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession({ status: 'authenticated', user: response.user })
   }, [])
 
+  const loginWithGoogle = useCallback(async (idToken: string) => {
+    const response = await googleSignInRequest({ idToken })
+    setAccessToken(response.accessToken)
+    setSession({ status: 'authenticated', user: response.user })
+  }, [])
+
   const logout = useCallback(async () => {
     try {
       await logoutSession()
@@ -81,11 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status: session.status,
       user: session.user,
       login,
+      loginWithGoogle,
       logout,
       setUser,
       clearSession,
     }),
-    [session, login, logout, setUser, clearSession],
+    [session, login, loginWithGoogle, logout, setUser, clearSession],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

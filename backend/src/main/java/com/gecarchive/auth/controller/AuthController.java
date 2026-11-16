@@ -2,6 +2,7 @@ package com.gecarchive.auth.controller;
 
 import com.gecarchive.auth.dto.CsrfResponse;
 import com.gecarchive.auth.dto.ForgotPasswordRequest;
+import com.gecarchive.auth.dto.GoogleSignInRequest;
 import com.gecarchive.auth.dto.LoginRequest;
 import com.gecarchive.auth.dto.MessageResponse;
 import com.gecarchive.auth.dto.RegisterRequest;
@@ -10,6 +11,7 @@ import com.gecarchive.auth.dto.ResetPasswordRequest;
 import com.gecarchive.auth.dto.TokenResponse;
 import com.gecarchive.auth.dto.VerifyEmailRequest;
 import com.gecarchive.auth.service.AuthenticationService;
+import com.gecarchive.auth.service.GoogleSignInService;
 import com.gecarchive.auth.service.JwtTokenService;
 import com.gecarchive.auth.service.PasswordResetService;
 import com.gecarchive.auth.service.RegistrationService;
@@ -38,6 +40,7 @@ public class AuthController {
 
     private final RegistrationService registrationService;
     private final AuthenticationService authenticationService;
+    private final GoogleSignInService googleSignInService;
     private final PasswordResetService passwordResetService;
     private final JwtTokenService jwtTokenService;
     private final RefreshCookieFactory cookieFactory;
@@ -46,12 +49,14 @@ public class AuthController {
     public AuthController(
             RegistrationService registrationService,
             AuthenticationService authenticationService,
+            GoogleSignInService googleSignInService,
             PasswordResetService passwordResetService,
             JwtTokenService jwtTokenService,
             RefreshCookieFactory cookieFactory,
             CookieCsrfTokenRepository csrfTokenRepository) {
         this.registrationService = registrationService;
         this.authenticationService = authenticationService;
+        this.googleSignInService = googleSignInService;
         this.passwordResetService = passwordResetService;
         this.jwtTokenService = jwtTokenService;
         this.cookieFactory = cookieFactory;
@@ -88,6 +93,15 @@ public class AuthController {
             HttpServletRequest httpRequest) {
         AuthenticationService.Session session = authenticationService.login(
                 request, httpRequest.getRemoteAddr());
+        return tokenResponse(session, HttpStatus.OK);
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<TokenResponse> google(
+            @Valid @RequestBody GoogleSignInRequest request,
+            HttpServletRequest httpRequest) {
+        AuthenticationService.Session session = googleSignInService.signIn(
+                request, ClientInfo.from(httpRequest));
         return tokenResponse(session, HttpStatus.OK);
     }
 

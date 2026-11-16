@@ -102,6 +102,7 @@ Names match `backend/src/main/resources/application.yml` exactly.
 | `APP_JWT_ISSUER` | Issuer claim, usually the backend base URL |
 | `APP_FRONTEND_BASE_URL` | Public frontend URL used in verification and reset links |
 | `APP_REFRESH_COOKIE_SECURE` | `true` in production |
+| `GOOGLE_CLIENT_ID` | Public Google OAuth client ID; empty disables Google sign-in |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
@@ -132,8 +133,37 @@ is `false` so `/actuator/health` does not wait for the mail provider.
 | `VITE_API_BASE_URL` | Usually `/api/v1` |
 | `VITE_CLOUDINARY_CLOUD_NAME` | Public Cloudinary cloud name |
 | `VITE_APP_ENV` | Environment label |
+| `VITE_GOOGLE_CLIENT_ID` | Same public client ID as `GOOGLE_CLIENT_ID`; empty hides the button |
 
 Never put secrets in `VITE_*` variables.
+
+### Google sign-in
+
+The backend and the frontend need the **same** public client ID. It is not a
+secret: Google's ID-token flow has no client secret, so there is nothing to
+store server-side.
+
+1. Google Cloud Console → **APIs & Services → OAuth consent screen**. Choose
+   *External*, fill in the app name (`GEC Sheikhpura Archive`), the support
+   email, and the developer email. Add the scope `.../auth/userinfo.email` and
+   `.../auth/userinfo.profile`. Leave it in *Testing* while the archive is being
+   validated, then publish it.
+2. **APIs & Services → Credentials → Create credentials → OAuth client ID →
+   Web application.**
+3. Authorized JavaScript origins (no paths, no trailing slash):
+   - `https://gec-sheikhpura-archive.vercel.app`
+   - `http://localhost:5173`
+4. No authorized redirect URI is needed; the ID-token flow never redirects.
+5. Copy the client ID (it ends in `.apps.googleusercontent.com`).
+6. Render: set `GOOGLE_CLIENT_ID` and redeploy. Vercel: set
+   `VITE_GOOGLE_CLIENT_ID` and redeploy, because Vite inlines `VITE_*` values at
+   build time.
+7. Confirm the deploy log reports a healthy start, then open `/sign-in` and
+   check that the Google button appears and signs in.
+
+If `GOOGLE_CLIENT_ID` is set but `VITE_GOOGLE_CLIENT_ID` is not, the backend
+accepts tokens that the browser never produces. If the reverse, the button
+appears and every attempt returns `503`. Set both or neither.
 
 ## 6. Database migrations
 

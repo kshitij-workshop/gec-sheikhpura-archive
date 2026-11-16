@@ -17,8 +17,16 @@ public class User extends VersionedEntity {
     @Column(name = "email", nullable = false, length = 320)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 255)
+    /**
+     * Optional for accounts created through Google sign-in. Such accounts can
+     * still obtain a password through the password-reset flow.
+     */
+    @Column(name = "password_hash", length = 255)
     private String passwordHash;
+
+    /** Stable Google account identifier (`sub`). Unique when present. */
+    @Column(name = "google_subject", length = 255)
+    private String googleSubject;
 
     @Column(name = "display_name", nullable = false, length = 120)
     private String displayName;
@@ -54,6 +62,14 @@ public class User extends VersionedEntity {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public String getGoogleSubject() {
+        return googleSubject;
+    }
+
+    public void setGoogleSubject(String googleSubject) {
+        this.googleSubject = googleSubject;
     }
 
     public String getDisplayName() {

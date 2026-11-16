@@ -11,6 +11,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -53,7 +54,13 @@ public class AuthConfiguration {
         return new NimbusJwtEncoder(new ImmutableSecret<SecurityContext>(secretKey));
     }
 
+    /**
+     * Decodes the archive's own access tokens. Marked primary because the
+     * resource server resolves a single {@code JwtDecoder} by type and a second
+     * decoder exists for Google ID tokens.
+     */
     @Bean
+    @Primary
     JwtDecoder jwtDecoder(SecretKey secretKey, AuthProperties properties) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey)
                 .macAlgorithm(MacAlgorithm.HS256)

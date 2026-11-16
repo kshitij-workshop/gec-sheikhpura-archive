@@ -92,7 +92,8 @@ public class PasswordResetService {
         User user = authTokens.consume(request.token(), AuthTokenPurpose.PASSWORD_RESET);
         passwordPolicy.validate(request.password(), user.getEmail(), user.getDisplayName());
 
-        if (passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        if (user.getPasswordHash() != null
+                && passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new BadRequestException("The new password must be different from the current password.");
         }
 
@@ -124,6 +125,11 @@ public class PasswordResetService {
             ClientInfo client) {
 
         User user = users.findById(principal.id()).orElseThrow(UnauthorizedException::new);
+
+        if (user.getPasswordHash() == null) {
+            throw new BadRequestException(
+                    "This account signs in with Google. Use \"Forgot password\" to set a password first.");
+        }
 
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
             throw new BadRequestException("The current password is incorrect.");

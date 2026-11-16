@@ -708,3 +708,29 @@ The homepage needed to show how many people use the archive, how many accounts e
 - The archive can state exactly what it stores about visitors, which is a random alias and a date.
 - Rows are per day, so a future retention policy or a daily snapshot table can prune old rows without changing the API contract.
 - If exact unique-visitor analytics are ever required, that is a different decision with its own privacy review and vendor choice.
+
+## ADR-0025 — Google sign-in through Identity Services ID tokens
+
+**Status:** Accepted
+
+### Context
+
+Students expect to sign in with the Google account their college already uses, and the archive currently requires a password plus an emailed verification link. An OAuth authorization-code flow would need a client secret stored on the backend, a redirect URI, and a server-side token exchange. The archive is a static SPA on Vercel with a backend on Render Free and no secrets budget: every stored secret is another thing to rotate and leak.
+
+### Decision
+
+- Use the Google Identity Services **ID-token flow**: the browser asks Google for an ID token and posts it to `POST /api/v1/auth/google`. No client secret exists, no redirect URI is registered, and no code exchange happens.
+- Verify the token server-side with Google's JWKS, enforcing signature, lifetime, issuer, audience, `email_verified`, `email`, and `sub`. Reuse `spring-security-oauth2-jose`, which is already a dependency.
+- Link accounts **only** on a Google-verified email, which carries the same trust as a clicked verification link. Never link on an unverified email.
+- Never change a role during linking, never take over an address bound to a different Google subject (`409`), and never revive a suspended or deactivated account (`401`).
+- Create new Google accounts as `ACTIVE`, `USER`, with `password_hash = NULL`, and a database check that every account keeps at least one credential.
+- Keep the feature inert without configuration: no client ID means no frontend button and a `503` from the API.
+- Rate-limit per IP and per Google subject using the existing limiter, and audit each sign-in with booleans only.
+
+### Consequences
+
+- The archive stores no Google tokens, no refresh tokens from Google, and no client secret. A stolen database row cannot be used against Google.
+- Accounts created through Google can set a password later through "Forgot password", because the reset token goes to the verified mailbox. That keeps the two flows compatible instead of creating two account classes.
+- Revoking access happens in the archive (suspend the account), not at Google; there is no token to revoke because no long-lived Google credential is stored.
+- Google can change its claims or rotate keys. Keys are fetched from Google's JWKS endpoint, so rotation is handled automatically; a new required claim would need a code change.
+- Tests cannot reach Google, so the verifier is replaced in integration tests and the real JWKS path is covered by manual verification with a real client ID.

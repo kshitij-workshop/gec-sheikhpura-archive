@@ -165,6 +165,15 @@ public class GlobalExceptionHandler {
                 .body(problem);
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+    ProblemDetail handleServiceUnavailable(ServiceUnavailableException exception) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                exception.getMessage());
+        problem.setTitle("Service unavailable");
+        return problem;
+    }
+
     @ExceptionHandler(Exception.class)
     ProblemDetail handleUnexpected(Exception exception) {
         log.error("Unhandled exception", exception);

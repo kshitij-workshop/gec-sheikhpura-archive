@@ -9,6 +9,11 @@ export interface AuthState {
   user: User | null
   /** Credentialed login; throws `ApiError` on invalid credentials. */
   login: (input: LoginInput) => Promise<void>
+  /**
+   * Signs in with a Google ID token. Throws `ApiError` when the backend rejects
+   * the token, refuses the account, or has Google sign-in unconfigured.
+   */
+  loginWithGoogle: (idToken: string) => Promise<void>
   /** Revokes the refresh family and clears local state. */
   logout: () => Promise<void>
   /** Replaces the cached user after a profile or account update. */

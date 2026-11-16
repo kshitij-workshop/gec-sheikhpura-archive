@@ -51,7 +51,11 @@ public class AuthenticationService {
 
         Optional<User> candidate = users.findByEmailIgnoreCase(email);
         User user = candidate.orElse(null);
-        String hash = user == null ? timingEqualizerHash : user.getPasswordHash();
+        // Google-only accounts have no password hash; compare against the
+        // equalizer hash so timing does not reveal whether the account exists.
+        String hash = user == null || user.getPasswordHash() == null
+                ? timingEqualizerHash
+                : user.getPasswordHash();
         boolean passwordMatches = passwordEncoder.matches(request.password(), hash);
 
         if (user == null || !passwordMatches || user.getStatus() != UserStatus.ACTIVE) {
@@ -75,7 +79,12 @@ public class AuthenticationService {
         refreshTokenService.revokeByRawToken(rawRefreshToken);
     }
 
-    private Session issueSession(User user) {
+    /**
+     * Issues the archive's own access token and refresh cookie pair for an
+     * already-authenticated user. Used by password login and Google sign-in so
+     * both flows produce an identical session.
+     */
+    public Session issueSession(User user) {
         String accessToken = jwtTokenService.issueAccessToken(user);
         RefreshTokenService.IssuedRefreshToken refreshToken = refreshTokenService.issue(user);
         return new Session(accessToken, refreshToken.rawToken(), refreshToken.expiresAt(), user);

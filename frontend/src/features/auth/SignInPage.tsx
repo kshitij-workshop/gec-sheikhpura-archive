@@ -3,15 +3,10 @@ import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { z } from 'zod'
 
-import {
-  Alert,
-  Button,
-  Card,
-  PageHeader,
-  TextField,
-  buttonStyles,
-} from '../../components/ui'
-import { ApiError } from '../../lib/api/client'
+import { Alert, Button, Card, PageHeader, TextField, buttonStyles } from '../../components/ui'
+import { googleClientId } from '../../lib/config'
+import { signInMessage } from './authMessages'
+import { GoogleSignInButton } from './GoogleSignInButton'
 import { useAuth } from './useAuth'
 
 const signInSchema = z.object({
@@ -22,24 +17,6 @@ const signInSchema = z.object({
 interface FieldErrors {
   email?: string
   password?: string
-}
-
-/** Maps transport failures to safe, non-enumerating guidance. */
-function signInMessage(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.status === 401) {
-      return 'Email or password is incorrect.'
-    }
-    if (error.status === 429) {
-      return 'Too many sign-in attempts. Wait a moment and try again.'
-    }
-    if (error.status === 403) {
-      return 'Sign-in was blocked by the server. Try again from the archive’s official address.'
-    }
-    return error.problem?.detail ?? 'Sign-in failed. Please try again.'
-  }
-
-  return 'The server could not be reached. Check your connection and try again.'
 }
 
 /** Only same-origin router paths may be used as a post-login target. */
@@ -156,6 +133,24 @@ export default function SignInPage() {
             {formError}
           </Alert>
         ) : null}
+
+        {googleClientId() === '' ? null : (
+          <div className="space-y-3">
+            <GoogleSignInButton
+              onSuccess={() => {
+                navigate(target, { replace: true })
+              }}
+              onError={(message) => {
+                setFormError(message)
+              }}
+            />
+            <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-archive-muted">
+              <span className="h-px flex-1 bg-archive-line" />
+              or use your email
+              <span className="h-px flex-1 bg-archive-line" />
+            </div>
+          </div>
+        )}
 
         <form
           noValidate

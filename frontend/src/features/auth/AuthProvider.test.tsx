@@ -8,7 +8,7 @@ import {
   setAccessToken,
 } from '../../lib/api/client'
 import type { TokenResponse } from '../../lib/api/types'
-import { loginRequest } from './authApi'
+import { googleSignInRequest, loginRequest } from './authApi'
 import { AuthProvider } from './AuthProvider'
 import { useAuth } from './useAuth'
 
@@ -20,6 +20,7 @@ vi.mock('../../lib/api/client', () => ({
 
 vi.mock('./authApi', () => ({
   loginRequest: vi.fn(),
+  googleSignInRequest: vi.fn(),
 }))
 
 const session: TokenResponse = {
@@ -39,7 +40,7 @@ const session: TokenResponse = {
 }
 
 function SessionProbe() {
-  const { status, user, login, logout } = useAuth()
+  const { status, user, login, loginWithGoogle, logout } = useAuth()
 
   return (
     <div>
@@ -52,6 +53,14 @@ function SessionProbe() {
         }}
       >
         Log in
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          void loginWithGoogle('google-id-token')
+        }}
+      >
+        Log in with Google
       </button>
       <button
         type="button"
@@ -109,6 +118,23 @@ describe('AuthProvider', () => {
     expect(loginRequest).toHaveBeenCalledWith({
       email: 'asha.verma@example.edu',
       password: 'secret',
+    })
+    expect(setAccessToken).toHaveBeenCalledWith('fresh-access-token')
+    expect(await screen.findByText('status:authenticated')).toBeInTheDocument()
+  })
+
+  it('stores a Google sign-in response in memory and state', async () => {
+    const user = userEvent.setup()
+    vi.mocked(refreshAccessToken).mockResolvedValue(null)
+    vi.mocked(googleSignInRequest).mockResolvedValue(session)
+
+    renderProvider()
+    await screen.findByText('status:anonymous')
+
+    await user.click(screen.getByRole('button', { name: 'Log in with Google' }))
+
+    expect(googleSignInRequest).toHaveBeenCalledWith({
+      idToken: 'google-id-token',
     })
     expect(setAccessToken).toHaveBeenCalledWith('fresh-access-token')
     expect(await screen.findByText('status:authenticated')).toBeInTheDocument()

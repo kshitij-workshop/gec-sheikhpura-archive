@@ -12,6 +12,7 @@ export const anonymousAuth: AuthState = {
   status: 'anonymous',
   user: null,
   login: () => Promise.resolve(),
+  loginWithGoogle: () => Promise.resolve(),
   logout: () => Promise.resolve(),
   setUser: () => undefined,
   clearSession: () => undefined,

@@ -45,6 +45,48 @@ class SchemaConstraintIT extends AbstractDomainIntegrationTest {
     }
 
     @Test
+    void rejectsAnAccountWithNeitherPasswordNorGoogleSubject() {
+        User user = new User();
+        user.setEmail("credentialless-" + uniqueSuffix() + "@example.test");
+        user.setDisplayName("No Credential");
+        user.setStatus(UserStatus.ACTIVE);
+
+        assertThatThrownBy(() -> users.saveAndFlush(user))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void allowsAnAccountWithoutAPasswordWhenGoogleIsLinked() {
+        User user = new User();
+        user.setEmail("google-" + uniqueSuffix() + "@example.test");
+        user.setDisplayName("Google Only");
+        user.setStatus(UserStatus.ACTIVE);
+        user.setGoogleSubject("google-subject-" + uniqueSuffix());
+
+        assertThat(users.saveAndFlush(user).getId()).isNotNull();
+    }
+
+    @Test
+    void rejectsTheSameGoogleSubjectOnTwoAccounts() {
+        String subject = "google-subject-" + uniqueSuffix();
+        User first = new User();
+        first.setEmail("first-" + uniqueSuffix() + "@example.test");
+        first.setDisplayName("First");
+        first.setStatus(UserStatus.ACTIVE);
+        first.setGoogleSubject(subject);
+        users.saveAndFlush(first);
+
+        User second = new User();
+        second.setEmail("second-" + uniqueSuffix() + "@example.test");
+        second.setDisplayName("Second");
+        second.setStatus(UserStatus.ACTIVE);
+        second.setGoogleSubject(subject);
+
+        assertThatThrownBy(() -> users.saveAndFlush(second))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
     void rejectsCaseInsensitiveDuplicateEmail() {
         User first = activeUser();
         User duplicate = new User();

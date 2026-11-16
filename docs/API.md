@@ -102,6 +102,7 @@ All paths are relative to `/api/v1`.
 | `POST` | `/auth/verify-email` | Public | Consume a single-use verification token |
 | `POST` | `/auth/resend-verification` | Public | Reissue a verification email |
 | `POST` | `/auth/login` | Public | Issue an access token and refresh cookie |
+| `POST` | `/auth/google` | Public | Exchange a Google ID token for an archive session |
 | `POST` | `/auth/refresh` | Refresh cookie + CSRF | Rotate refresh token and issue a new access token |
 | `POST` | `/auth/logout` | Refresh cookie + CSRF | Revoke the current token family and clear the cookie |
 | `POST` | `/auth/forgot-password` | Public | Send a password-reset email |
@@ -113,7 +114,7 @@ All paths are relative to `/api/v1`.
 | `PATCH` | `/admin/users/{id}/status` | `ADMIN`/`SUPER_ADMIN` | Suspend, deactivate, or reactivate |
 | `PATCH` | `/admin/users/{id}/role` | `SUPER_ADMIN` | Change a user's role |
 
-CSRF is not required for `register`, `verify-email`, `resend-verification`, `login`, `forgot-password`, or `reset-password`, because those requests do not authenticate with a cookie.
+CSRF is not required for `register`, `verify-email`, `resend-verification`, `login`, `google`, `forgot-password`, or `reset-password`, because those requests do not authenticate with a cookie.
 
 ### 7.3 Request and response shapes
 
@@ -123,7 +124,14 @@ Register:
 { "email": "student@example.com", "password": "ArchivePass1234", "displayName": "Student Name" }
 ```
 
-Login and refresh response:
+Google sign-in (the ID token comes from Google Identity Services in the browser
+and is never stored):
+
+```json
+{ "idToken": "<google-id-token>" }
+```
+
+Login, Google, and refresh response:
 
 ```json
 {
@@ -146,6 +154,7 @@ Login and refresh response:
 | Endpoint | Success | Notes |
 |---|---|---|
 | `POST /auth/register` | `202` `{ "message": ... }` | Generic response; never reveals whether the email exists |
+| `POST /auth/google` | `200` | Verifies the ID token with Google's JWKS, then issues the normal session |
 | `POST /auth/verify-email` | `204` | Invalid, used, or expired token returns `400` |
 | `POST /auth/resend-verification` | `202` | Generic response |
 | `POST /auth/forgot-password` | `202` | Generic response |
@@ -156,6 +165,9 @@ Login and refresh response:
 Error behaviour:
 
 - Invalid credentials, inactive accounts, and invalid refresh tokens return `401` with `WWW-Authenticate: Bearer`.
+- `POST /auth/google` returns `401` for an unverifiable or expired ID token, for an unverified Google email, or for a suspended or deactivated account.
+- `POST /auth/google` returns `409` when the email address is already connected to a different Google account.
+- `POST /auth/google` returns `503` when the deployment has no Google client ID; the browser hides its button in that case.
 - Missing, invalid, or reused CSRF tokens on cookie endpoints return `403`.
 - Requests from a disallowed `Origin` on `/api/**` return `403`.
 - `ADMIN` attempts to change roles return `403`; `GUEST` role persistence returns `400`.
