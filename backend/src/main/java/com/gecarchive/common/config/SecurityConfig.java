@@ -44,6 +44,14 @@ public class SecurityConfig {
             "/api/v1/auth/reset-password"
     };
 
+    /**
+     * Anonymous write endpoint without a CSRF token: it only records an
+     * idempotent visit marker and is still guarded by the origin allowlist.
+     */
+    private static final String[] PUBLIC_STAT_POSTS = {
+            "/api/v1/public-stats/visits"
+    };
+
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
@@ -62,6 +70,7 @@ public class SecurityConfig {
                         .csrfTokenRepository(csrfTokenRepository)
                         .csrfTokenRequestHandler(csrfRequestHandler)
                         .ignoringRequestMatchers(PUBLIC_AUTH_POSTS)
+                        .ignoringRequestMatchers(PUBLIC_STAT_POSTS)
                         .ignoringRequestMatchers(request -> {
                             String authorization = request.getHeader("Authorization");
                             return authorization != null && authorization.startsWith("Bearer ");
@@ -85,9 +94,11 @@ public class SecurityConfig {
                                 "/api/v1/albums",
                                 "/api/v1/albums/**",
                                 "/api/v1/photos/**",
-                                "/api/v1/contributors")
+                                "/api/v1/contributors",
+                                "/api/v1/public-stats")
                         .permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_AUTH_POSTS).permitAll()
+                        .requestMatchers(HttpMethod.POST, PUBLIC_STAT_POSTS).permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/refresh",
                                 "/api/v1/auth/logout")

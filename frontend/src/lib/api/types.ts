@@ -368,3 +368,12 @@ export interface AnalyticsSummary {
   activeCategories: number
   contributors: number
 }
+
+/** Aggregate-only public counters; no identifiers are exposed. */
+export interface PublicStats {
+  totalVisitors: number
+  visitorsToday: number
+  registeredUsers: number
+  activeUsers: number
+  generatedAt: string
+}

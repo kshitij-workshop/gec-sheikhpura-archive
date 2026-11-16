@@ -198,6 +198,13 @@ Phase 03, Phase 04 and Phase 05 implement the archive, upload and governance end
 | `GET` | `/api/v1/academic-years` | Public academic timeline |
 | `GET` | `/api/v1/categories` | Public categories |
 | `GET` | `/api/v1/contributors` | Public contributor directory |
+| `GET` | `/api/v1/public-stats` | Aggregate archive activity counters |
+| `POST` | `/api/v1/public-stats/visits` | Record one anonymous visit for the current UTC day |
+
+`GET /public-stats` returns `totalVisitors`, `visitorsToday`, `registeredUsers`, `activeUsers`, and `generatedAt`. It contains counts only: no visitor identifier, account, email, IP address, or per-event activity is exposed. `totalVisitors` counts distinct anonymous visitor identifiers, `registeredUsers` counts verified accounts, and `activeUsers` counts accounts holding a refresh session issued in the last 30 minutes, which approximates who is signed in now.
+
+`POST /public-stats/visits` accepts `{"visitorId": "<uuid>"}` and returns `204`. It is public and CSRF-exempt because it carries no session and is guarded by the origin allowlist. The write is idempotent per `(visitorId, UTC day)`, so the browser calls it at most once per day. A malformed identifier returns `400`.
+
 
 `GET /events` accepts `page` (default `0`), `size` (default `24`, clamped to `1–100`), and optional filters: case-insensitive `query` against the event title, `academicYearId`, `categoryId`, and `featured` (`true`/`false`). Filters combine conjunctively and only published, non-deleted events are returned; results are ordered by event date descending, then ID ascending. There is no separate archive search endpoint: title search is the `query` filter on `GET /events`, and album, category, and academic-year narrowing is done with the filters above.
 

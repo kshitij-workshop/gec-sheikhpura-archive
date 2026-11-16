@@ -45,4 +45,17 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
             @Param("userId") UUID userId,
             @Param("now") Instant now,
             @Param("reason") String reason);
+
+    /**
+     * Approximate count of signed-in accounts. Refresh tokens rotate on every
+     * refresh, so the newest non-revoked token's issue time tracks recent
+     * activity without writing to the user row on every request.
+     */
+    @Query("""
+            select count(distinct token.user.id)
+            from RefreshToken token
+            where token.revokedAt is null
+              and token.issuedAt >= :since
+            """)
+    long countUsersActiveSince(@Param("since") Instant since);
 }

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
@@ -17,12 +17,24 @@ function stubHome(options: { eventsFail?: boolean } = {}) {
     featured: false,
   })
 
-  vi.stubGlobal(
-    'fetch',
-    vi.fn((input: RequestInfo | URL) => {
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const path = requestPath(input)
       const url = String(input)
 
+      if (path.endsWith('/public-stats/visits')) {
+        return Promise.resolve(new Response(null, { status: 204 }))
+      }
+      if (path.endsWith('/public-stats')) {
+        return Promise.resolve(
+          jsonResponse({
+            totalVisitors: 1234,
+            visitorsToday: 12,
+            registeredUsers: 87,
+            activeUsers: 3,
+            generatedAt: '2026-11-16T00:00:00Z',
+          }),
+        )
+      }
       if (options.eventsFail && path.endsWith('/events')) {
         return Promise.resolve(
           jsonResponse({ title: 'Unavailable', detail: 'Offline.' }, 404),
@@ -42,8 +54,10 @@ function stubHome(options: { eventsFail?: boolean } = {}) {
       }
 
       return Promise.resolve(jsonResponse({ title: 'Not Found' }, 404))
-    }),
-  )
+  })
+
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
 }
 
 describe('HomePage', () => {
@@ -78,5 +92,35 @@ describe('HomePage', () => {
     expect(
       screen.queryByText('Featured events are being prepared'),
     ).not.toBeInTheDocument()
+  })
+
+  it('shows aggregate archive activity counters', async () => {
+    stubHome()
+
+    renderApp({ path: '/' })
+
+    expect(await screen.findByText('Archive visitors')).toBeInTheDocument()
+    expect(await screen.findByText('1,234')).toBeInTheDocument()
+    expect(screen.getByText('Visitors today')).toBeInTheDocument()
+    expect(screen.getByText('Registered members')).toBeInTheDocument()
+    expect(screen.getByText('Signed in now')).toBeInTheDocument()
+    expect(
+      screen.getByText('Active in the last 30 minutes'),
+    ).toBeInTheDocument()
+  })
+
+  it('records one anonymous visit per browser per day', async () => {
+    window.localStorage.clear()
+    const fetchMock = stubHome()
+
+    renderApp({ path: '/' })
+
+    await waitFor(() => {
+      const visits = fetchMock.mock.calls.filter(([input]) =>
+        requestPath(input).endsWith('/public-stats/visits'),
+      )
+      expect(visits).toHaveLength(1)
+    })
+    expect(window.localStorage.getItem('gecs.last-visit-day')).not.toBeNull()
   })
 })

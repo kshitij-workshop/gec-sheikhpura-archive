@@ -684,3 +684,27 @@ Phase 09 needs a moderation workspace, but the queue read model returned only me
 - The disclosure is testable: `ModerationIntegrationIT` checks that the queue carries the identifier while `/me/photos` does not.
 - Pending assets remain discoverable by anyone who already knows their public ID; the archive does not claim URL secrecy.
 - A future move to private delivery must cover uploads, verification, previews, and approval together rather than adding signing to one screen.
+
+## ADR-0024 — Anonymous, aggregate-only archive activity counters
+
+**Status:** Accepted
+
+### Context
+
+The homepage needed to show how many people use the archive, how many accounts exist, and roughly how many are signed in. Any answer touches privacy: visitor analytics can drift into tracking individuals, and the project forbids unnecessary personal data collection. The deployment is a single free-tier instance with PostgreSQL and no analytics vendor, no Redis, and no client-side tracking service.
+
+### Decision
+
+- Count visitors with one row per anonymous visitor identifier per UTC day (`visitor_days`), keyed on `(visitor_id, visit_date)`, so a repeat visit is an idempotent update rather than a second row.
+- Generate `visitor_id` in the browser as a random UUID stored in `localStorage`. Never derive it from the IP address, the user agent, a device fingerprint, or an account. The server never stores the IP address, user agent, or referrer of a visit.
+- Record at most one visit per browser per UTC day, guarded client-side and enforced server-side by the primary key.
+- Derive `registeredUsers` from verified accounts and `activeUsers` from non-revoked refresh sessions issued in the last 30 minutes. This avoids writing to `users` on every authenticated request, so the counter costs no extra write load.
+- Expose only counts from `GET /public-stats`. No identifiers, drill-downs, or per-event activity cross the public boundary.
+- Fail silently on the client: if the counter endpoint is unavailable, the homepage renders without the statistics block.
+
+### Consequences
+
+- The counts are honest but approximate: clearing browser storage or using a different browser counts again, and scripted requests could inflate visit counts, which is acceptable for a non-financial public counter.
+- The archive can state exactly what it stores about visitors, which is a random alias and a date.
+- Rows are per day, so a future retention policy or a daily snapshot table can prune old rows without changing the API contract.
+- If exact unique-visitor analytics are ever required, that is a different decision with its own privacy review and vendor choice.

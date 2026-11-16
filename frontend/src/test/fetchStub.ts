@@ -39,6 +39,20 @@ export function defaultFetchStub(input: RequestInfo | URL): Promise<Response> {
   if (path.endsWith('/academic-years') || path.endsWith('/categories')) {
     return Promise.resolve(jsonResponse([]))
   }
+  if (path.endsWith('/public-stats/visits')) {
+    return Promise.resolve(new Response(null, { status: 204 }))
+  }
+  if (path.endsWith('/public-stats')) {
+    return Promise.resolve(
+      jsonResponse({
+        totalVisitors: 0,
+        visitorsToday: 0,
+        registeredUsers: 0,
+        activeUsers: 0,
+        generatedAt: '2026-01-01T00:00:00Z',
+      }),
+    )
+  }
   if (
     path.endsWith('/contributors') ||
     path.endsWith('/events') ||

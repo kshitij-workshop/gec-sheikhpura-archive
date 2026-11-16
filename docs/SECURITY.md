@@ -359,6 +359,7 @@ Audit records are append-only and must not contain passwords, tokens, or secrets
 - Preserve accurate photographer attribution.
 - Define retention for originals, rejected uploads, and removed content.
 - Provide a contact path for privacy complaints.
+- Visitor counting stores one random browser-generated identifier per UTC day and nothing else: no IP address, user agent, referrer, or account link (ADR-0024). Public statistics expose counts only.
 
 ## 14. Dependency and vulnerability management
 
