@@ -27,6 +27,16 @@
     color-scheme: light;
   }
 
+  /*
+   * Native modal <dialog> elements are centred by the user-agent rule
+   * `dialog { margin: auto }`. Tailwind's preflight resets `margin` to 0 on
+   * every element, which pins every dialog to the top-left corner. Restore the
+   * UA behaviour here, once, so all present and future dialogs open centred.
+   */
+  dialog {
+    margin: auto;
+  }
+
   body {
     min-width: 320px;
     background-color: var(--color-archive-paper);
