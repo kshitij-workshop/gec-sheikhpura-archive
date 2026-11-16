@@ -147,28 +147,34 @@ export default function AlbumPage() {
             <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {photos.map((photo, index) => (
                 <li key={photo.id}>
-                  <figure>
+                  <figure className="group h-full rounded-lg border border-archive-line bg-white p-2 shadow-[0_1px_2px_rgba(28,25,23,0.06),0_10px_24px_-14px_rgba(28,25,23,0.28)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(28,25,23,0.08),0_18px_34px_-16px_rgba(28,25,23,0.38)]">
                     <button
                       type="button"
                       onClick={() => {
                         setViewerIndex(index)
                       }}
                       aria-label={`View ${photo.title?.trim() || `photograph ${String(index + 1)}`}`}
-                      className="group block w-full overflow-hidden rounded-lg border border-archive-line bg-stone-100"
+                      className="block w-full overflow-hidden rounded-[3px] bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-archive-accent"
                     >
                       <PhotoImage
                         photo={photo}
                         width={480}
                         height={360}
                         crop="fill"
-                        className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                        className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                       />
                     </button>
-                    <figcaption className="mt-1 line-clamp-1 text-xs text-archive-muted">
-                      {photo.title?.trim() ? `${photo.title.trim()} · ` : ''}
-                      {formatCredits(
-                        photo.photographers.map((credit) => credit.creditName),
-                      )}
+                    <figcaption className="mt-2 space-y-0.5 px-1 pb-1">
+                      <p className="line-clamp-1 font-serif text-sm font-medium leading-snug text-archive-ink">
+                        {photo.title?.trim() || 'Untitled photograph'}
+                      </p>
+                      <p className="line-clamp-1 text-xs text-archive-muted">
+                        {formatCredits(
+                          photo.photographers.map(
+                            (credit) => credit.creditName,
+                          ),
+                        )}
+                      </p>
                     </figcaption>
                   </figure>
                 </li>

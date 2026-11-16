@@ -121,22 +121,27 @@ export function PhotoViewer({
             </button>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto bg-stone-950/95">
-            <PhotoImage
-              photo={photo}
-              width={1600}
-              className="mx-auto max-h-[65vh] w-auto max-w-full object-contain"
-              eager
-            />
+          <div className="min-h-0 flex-1 overflow-auto bg-stone-950/95 p-4 sm:p-6">
+            <div className="mx-auto w-fit max-w-full rounded-sm border border-stone-800/60 bg-archive-paper p-3 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.9)]">
+              <PhotoImage
+                photo={photo}
+                width={1600}
+                className="mx-auto max-h-[62vh] w-auto max-w-full object-contain"
+                eager
+              />
+            </div>
           </div>
 
           <div className="space-y-2 border-t border-archive-line px-5 py-4">
             {photo.caption ? (
-              <p className="text-sm leading-relaxed text-archive-ink">
+              <p className="font-serif text-sm leading-relaxed text-archive-ink">
                 {photo.caption}
               </p>
             ) : null}
             <p className="text-xs text-archive-muted">
+              <span className="font-medium text-archive-ink">
+                Photograph by{' '}
+              </span>
               {formatCredits(photo.photographers.map((credit) => credit.creditName))}
               {photo.takenAt ? ` · Taken ${formatTimestamp(photo.takenAt)}` : ''}
             </p>

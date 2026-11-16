@@ -72,6 +72,23 @@ describe('AlbumPage', () => {
     )
   })
 
+  it('presents each photograph as a framed print with a caption', async () => {
+    stubAlbum()
+
+    renderApp({ path: '/albums/annual-sports-day' })
+
+    const view = await screen.findByRole('button', {
+      name: 'View Opening ceremony',
+    })
+    const figure = view.closest('figure')
+
+    expect(figure).not.toBeNull()
+    // The matte frame is the white mount that holds the print.
+    expect(figure).toHaveClass('bg-white')
+    expect(within(figure!).getByText('Opening ceremony')).toBeInTheDocument()
+    expect(within(figure!).getByText('Asha Verma')).toBeInTheDocument()
+  })
+
   it('opens the viewer and moves between photographs with the keyboard', async () => {
     const user = userEvent.setup()
     stubAlbum()
