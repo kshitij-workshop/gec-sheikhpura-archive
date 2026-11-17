@@ -10,7 +10,8 @@ import {
   buttonStyles,
 } from '../../components/ui'
 import { EventCard } from '../archive/components/EventCard'
-import { useAcademicYears, useEvents } from '../archive/queries'
+import { PhotoImage } from '../archive/components/PhotoImage'
+import { useAcademicYears, useEvents, useRecentPhotos } from '../archive/queries'
 
 const values = [
   {
@@ -48,12 +49,26 @@ function EventGridSkeleton() {
   )
 }
 
+function PhotoGridSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      {Array.from({ length: 6 }, (_, index) => (
+        <div key={index} className="space-y-2 rounded-lg border border-archive-line bg-white p-2">
+          <Skeleton className="aspect-square w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-3 w-1/2" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function HomePage() {
-  const featured = useEvents({ featured: true, size: 3 })
+  const recentPhotos = useRecentPhotos(6)
   const latest = useEvents({ size: 6 })
   const years = useAcademicYears()
 
-  const archiveUnavailable = featured.isError || latest.isError
+  const archiveUnavailable = recentPhotos.isError || latest.isError
 
   return (
     <div className="space-y-14">
@@ -83,41 +98,67 @@ export default function HomePage() {
         </Alert>
       ) : null}
 
-      <section aria-labelledby="featured-heading" className="space-y-4">
+      <section aria-labelledby="recent-photos-heading" className="space-y-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2
-            id="featured-heading"
+            id="recent-photos-heading"
             className="font-serif text-2xl font-semibold tracking-tight"
           >
-            Featured events
+            Recently added photographs
           </h2>
           <Link
-            to="/archive?featured=true"
+            to="/archive"
             className="text-sm font-medium text-archive-accent underline-offset-4 hover:underline"
           >
-            All featured events
+            Browse the archive
           </Link>
         </div>
 
-        {featured.isPending ? <EventGridSkeleton /> : null}
+        {recentPhotos.isPending ? <PhotoGridSkeleton /> : null}
 
-        {featured.data && featured.data.items.length === 0 ? (
+        {recentPhotos.data && recentPhotos.data.items.length === 0 ? (
           <EmptyState
-            title="Featured events are being prepared"
-            description="Browse the full archive to see everything published so far."
+            title="No photographs published yet"
+            description="Approved photographs appear here as moderators complete the first review."
             action={
-              <Link to="/archive" className={buttonStyles({ variant: 'secondary' })}>
-                Open the archive
+              <Link
+                to="/contribute"
+                className={buttonStyles({ variant: 'secondary' })}
+              >
+                Share photographs
               </Link>
             }
           />
         ) : null}
 
-        {featured.data && featured.data.items.length > 0 ? (
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.data.items.map((event) => (
-              <li key={event.id}>
-                <EventCard event={event} />
+        {recentPhotos.data && recentPhotos.data.items.length > 0 ? (
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            {recentPhotos.data.items.map((photo) => (
+              <li key={photo.id}>
+                <Link
+                  to={`/albums/${photo.albumSlug}`}
+                  className="group block h-full rounded-lg border border-archive-line bg-white p-2 shadow-[0_1px_2px_rgba(28,25,23,0.06),0_10px_24px_-14px_rgba(28,25,23,0.28)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(28,25,23,0.08),0_18px_34px_-16px_rgba(28,25,23,0.38)]"
+                >
+                  <figure className="h-full">
+                    <span className="block overflow-hidden rounded-[3px] bg-stone-100">
+                      <PhotoImage
+                        photo={photo}
+                        width={320}
+                        height={320}
+                        crop="fill"
+                        className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                      />
+                    </span>
+                    <figcaption className="mt-2 space-y-0.5 px-1 pb-1">
+                      <p className="line-clamp-1 font-serif text-sm font-medium leading-snug text-archive-ink">
+                        {photo.title?.trim() || 'Untitled photograph'}
+                      </p>
+                      <p className="line-clamp-1 text-xs text-archive-muted">
+                        {photo.albumTitle}
+                      </p>
+                    </figcaption>
+                  </figure>
+                </Link>
               </li>
             ))}
           </ul>

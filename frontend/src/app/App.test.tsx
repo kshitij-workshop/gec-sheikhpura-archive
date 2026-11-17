@@ -43,7 +43,7 @@ describe('application shell', () => {
       }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: 'Featured events' }),
+      screen.getByRole('heading', { name: 'Recently added photographs' }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: 'Recently added' }),

@@ -33,16 +33,17 @@ vi.mock('../../lib/cloudinaryUpload', () => ({
 }))
 
 const event = makeEvent()
+const album = event.albums[0]!
 const batch = makeSubmission()
 
-function stubPublishedEvents() {
+function stubPublishedEvents(listedEvent: ReturnType<typeof makeEvent> = event) {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const path = requestPath(input)
 
       if (path.endsWith('/events')) {
-        return Promise.resolve(jsonResponse(pageOf([event])))
+        return Promise.resolve(jsonResponse(pageOf([listedEvent])))
       }
 
       return Promise.resolve(jsonResponse({ title: 'Not Found' }, 404))
@@ -58,10 +59,14 @@ function photoFile(): File {
 
 async function chooseEventAndAddFile(
   user: ReturnType<typeof userEvent.setup>,
+  options: { album?: boolean } = {},
 ) {
   renderApp({ path: '/contribute', auth: authForRole('USER') })
 
   await user.selectOptions(await screen.findByLabelText('Event'), event.id)
+  if (options.album !== false) {
+    await user.selectOptions(screen.getByLabelText('Album'), album.id)
+  }
   await user.upload(screen.getByLabelText('Photographs'), photoFile())
   await screen.findByText('sports-day.jpg')
 }
@@ -96,7 +101,7 @@ describe('contribute upload flow', () => {
     await waitFor(() => {
       expect(createSubmission).toHaveBeenCalledWith({
         eventId: event.id,
-        albumId: null,
+        albumId: album.id,
         note: null,
       })
     })
@@ -116,6 +121,41 @@ describe('contribute upload flow', () => {
         photographers: [{ creditName: 'Asha Verma' }],
       }),
     )
+  })
+
+  it('refuses to submit without an album', async () => {
+    const user = userEvent.setup()
+    await chooseEventAndAddFile(user, { album: false })
+    await user.type(
+      screen.getByLabelText('Photographer credit'),
+      'Asha Verma',
+    )
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Create submission and upload 1 photograph',
+      }),
+    )
+
+    expect(
+      (await screen.findAllByText('Choose the album these photographs belong to.'))
+        .length,
+    ).toBeGreaterThan(0)
+    expect(createSubmission).not.toHaveBeenCalled()
+    expect(authorizeUpload).not.toHaveBeenCalled()
+  })
+
+  it('requires an event to have a published album before contributing', async () => {
+    stubPublishedEvents(makeEvent({ albums: [] }))
+    const user = userEvent.setup()
+    renderApp({ path: '/contribute', auth: authForRole('USER') })
+
+    await user.selectOptions(await screen.findByLabelText('Event'), event.id)
+
+    expect(
+      await screen.findByText('No published albums for this event'),
+    ).toBeInTheDocument()
+    expect(screen.queryByLabelText('Album')).not.toBeInTheDocument()
   })
 
   it('refuses to upload without an explicit photographer credit', async () => {

@@ -15,6 +15,7 @@ import com.gecarchive.archive.dto.AlbumSummaryResponse;
 import com.gecarchive.archive.dto.CategoryResponse;
 import com.gecarchive.archive.dto.EventResponse;
 import com.gecarchive.archive.dto.PublicPhotoResponse;
+import com.gecarchive.archive.dto.RecentPhotoResponse;
 import com.gecarchive.common.dto.PageResponse;
 import com.gecarchive.common.error.ResourceNotFoundException;
 import com.gecarchive.event.entity.Event;
@@ -137,18 +138,32 @@ public class PublicArchiveService {
         return PublicPhotoResponse.from(photo, photographers.findByPhoto_IdOrderByCreditOrderAsc(id));
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<RecentPhotoResponse> recentPhotos(int page, int size) {
+        var result = photos.findPublicRecentlyApproved(
+                PageRequest.of(Math.max(0, page), bounded(size)));
+        Map<UUID, List<PhotoPhotographer>> creditsByPhoto = creditsByPhoto(
+                result.getContent().stream().map(Photo::getId).toList());
+        return PageResponse.from(result, photo -> RecentPhotoResponse.from(photo,
+                creditsByPhoto.getOrDefault(photo.getId(), List.of())));
+    }
+
     /**
      * Adds photographer credits to a page of public photos with one batched
      * query, so gallery pages do not issue a credit query per photograph.
      */
     private PageResponse<PublicPhotoResponse> publicPhotos(Page<Photo> page) {
-        List<UUID> photoIds = page.getContent().stream().map(Photo::getId).toList();
-        Map<UUID, List<PhotoPhotographer>> creditsByPhoto = photoIds.isEmpty()
+        Map<UUID, List<PhotoPhotographer>> creditsByPhoto = creditsByPhoto(
+                page.getContent().stream().map(Photo::getId).toList());
+        return PageResponse.from(page, photo -> PublicPhotoResponse.from(photo,
+                creditsByPhoto.getOrDefault(photo.getId(), List.of())));
+    }
+
+    private Map<UUID, List<PhotoPhotographer>> creditsByPhoto(List<UUID> photoIds) {
+        return photoIds.isEmpty()
                 ? Map.of()
                 : photographers.findByPhoto_IdInOrderByPhoto_IdAscCreditOrderAsc(photoIds).stream()
                         .collect(Collectors.groupingBy(credit -> credit.getPhoto().getId()));
-        return PageResponse.from(page, photo -> PublicPhotoResponse.from(photo,
-                creditsByPhoto.getOrDefault(photo.getId(), List.of())));
     }
 
     private EventResponse eventResponse(Event event) {

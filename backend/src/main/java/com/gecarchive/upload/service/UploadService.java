@@ -99,13 +99,10 @@ public class UploadService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found."));
         if (event.isDeleted()) throw new BadRequestException("The selected event is archived.");
 
-        Album album = null;
-        if (request.albumId() != null) {
-            album = albums.findById(request.albumId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Album not found."));
-            if (!album.getEvent().getId().equals(event.getId()) || album.isDeleted()) {
-                throw new BadRequestException("The selected album does not belong to the selected event.");
-            }
+        Album album = albums.findById(request.albumId())
+                .orElseThrow(() -> new ResourceNotFoundException("Album not found."));
+        if (!album.getEvent().getId().equals(event.getId()) || album.isDeleted()) {
+            throw new BadRequestException("The selected album does not belong to the selected event.");
         }
 
         PhotoSubmission submission = new PhotoSubmission();

@@ -115,9 +115,10 @@ class UploadIntegrationIT extends AbstractAuthIntegrationTest {
     void unverifiedAssetCannotBecomeAPhoto() throws Exception {
         User user = createActiveUser(uniqueEmail("unverified"), defaultPassword(), Role.USER);
         Event event = event(user);
+        Album album = album(event, user);
         String token = accessToken(login(user.getEmail(), defaultPassword()));
         String auth = "Bearer " + token;
-        String submissionId = submission(auth, event.getId(), null);
+        String submissionId = submission(auth, event.getId(), album.getId());
 
         MvcResult authorization = mockMvc.perform(post("/api/v1/me/uploads/authorize")
                         .header(HttpHeaders.AUTHORIZATION, auth)
@@ -142,9 +143,10 @@ class UploadIntegrationIT extends AbstractAuthIntegrationTest {
     void invalidFormatAndOversizedAssetsAreRejected() throws Exception {
         User user = createActiveUser(uniqueEmail("invalid-asset"), defaultPassword(), Role.USER);
         Event event = event(user);
+        Album album = album(event, user);
         String token = accessToken(login(user.getEmail(), defaultPassword()));
         String auth = "Bearer " + token;
-        String submissionId = submission(auth, event.getId(), null);
+        String submissionId = submission(auth, event.getId(), album.getId());
         MvcResult authorization = mockMvc.perform(post("/api/v1/me/uploads/authorize")
                         .header(HttpHeaders.AUTHORIZATION, auth)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -169,9 +171,10 @@ class UploadIntegrationIT extends AbstractAuthIntegrationTest {
         User owner = createActiveUser(uniqueEmail("owner"), defaultPassword(), Role.USER);
         User other = createActiveUser(uniqueEmail("other"), defaultPassword(), Role.USER);
         Event event = event(owner);
+        Album album = album(event, owner);
         String ownerToken = accessToken(login(owner.getEmail(), defaultPassword()));
         String otherToken = accessToken(login(other.getEmail(), defaultPassword()));
-        String submissionId = submission("Bearer " + ownerToken, event.getId(), null);
+        String submissionId = submission("Bearer " + ownerToken, event.getId(), album.getId());
 
         mockMvc.perform(post("/api/v1/me/uploads/authorize")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + otherToken)
@@ -189,8 +192,9 @@ class UploadIntegrationIT extends AbstractAuthIntegrationTest {
     void anAuthorizationCannotBeUsedTwice() throws Exception {
         User user = createActiveUser(uniqueEmail("single-use"), defaultPassword(), Role.USER);
         Event event = event(user);
+        Album album = album(event, user);
         String auth = "Bearer " + accessToken(login(user.getEmail(), defaultPassword()));
-        String submissionId = submission(auth, event.getId(), null);
+        String submissionId = submission(auth, event.getId(), album.getId());
         MvcResult authorization = mockMvc.perform(post("/api/v1/me/uploads/authorize")
                         .header(HttpHeaders.AUTHORIZATION, auth).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"submissionId\":\"%s\"}".formatted(submissionId)))
@@ -208,6 +212,39 @@ class UploadIntegrationIT extends AbstractAuthIntegrationTest {
                 .andExpect(status().isCreated());
         mockMvc.perform(post("/api/v1/me/submissions/" + submissionId + "/photos")
                         .header(HttpHeaders.AUTHORIZATION, auth).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void aSubmissionMustTargetAnAlbumOfTheChosenEvent() throws Exception {
+        User user = createActiveUser(uniqueEmail("album-required"), defaultPassword(), Role.USER);
+        Event event = event(user);
+        String auth = "Bearer " + accessToken(login(user.getEmail(), defaultPassword()));
+
+        mockMvc.perform(post("/api/v1/me/submissions")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"eventId":"%s","note":"No album supplied"}
+                                """.formatted(event.getId())))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/v1/me/submissions")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"eventId":"%s","albumId":null,"note":"Null album supplied"}
+                                """.formatted(event.getId())))
+                .andExpect(status().isBadRequest());
+
+        Event otherEvent = event(user);
+        Album foreignAlbum = album(otherEvent, user);
+        mockMvc.perform(post("/api/v1/me/submissions")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"eventId":"%s","albumId":"%s","note":"Foreign album"}
+                                """.formatted(event.getId(), foreignAlbum.getId())))
                 .andExpect(status().isBadRequest());
     }
 

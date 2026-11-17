@@ -7,6 +7,6 @@ import jakarta.validation.constraints.Size;
 
 public record CreateSubmissionRequest(
         @NotNull UUID eventId,
-        UUID albumId,
+        @NotNull UUID albumId,
         @Size(max = 2000) String note) {
 }

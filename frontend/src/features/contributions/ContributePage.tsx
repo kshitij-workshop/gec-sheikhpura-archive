@@ -92,6 +92,7 @@ export default function ContributePage() {
   const [submission, setSubmission] = useState<Submission | null>(null)
   const [fileIssues, setFileIssues] = useState<string[]>([])
   const [formError, setFormError] = useState<string | null>(null)
+  const [albumError, setAlbumError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [starting, setStarting] = useState(false)
 
@@ -251,6 +252,15 @@ export default function ContributePage() {
       setFormError('Choose the event these photographs belong to.')
       return
     }
+    if (submission === null && albumId.length === 0) {
+      const message =
+        albums.length === 0
+          ? 'This event has no published albums yet. Photographs can only be contributed to an album.'
+          : 'Choose the album these photographs belong to.'
+      setAlbumError(message)
+      setFormError(message)
+      return
+    }
     if (pendingItems.length === 0) {
       setFormError('Add at least one photograph before starting the upload.')
       return
@@ -268,7 +278,7 @@ export default function ContributePage() {
       if (submission === null) {
         const created = await createSubmission({
           eventId,
-          albumId: albumId || null,
+          albumId,
           note: note.trim() || null,
         })
         setSubmission(created)
@@ -326,6 +336,7 @@ export default function ContributePage() {
     setBatchCredit('')
     setFileIssues([])
     setFormError(null)
+    setAlbumError(null)
     setNotice(null)
   }
 
@@ -408,8 +419,9 @@ export default function ContributePage() {
               1. Where do these photographs belong?
             </h2>
             <p className="text-sm text-archive-muted">
-              Only published events are listed. Choose an album only if the
-              photographs belong to one.
+              Only published events are listed. Choose the album the
+              photographs belong to; every contribution is filed under an
+              album.
             </p>
           </div>
 
@@ -443,6 +455,7 @@ export default function ContributePage() {
                 onChange={(event) => {
                   setEventId(event.target.value)
                   setAlbumId('')
+                  setAlbumError(null)
                 }}
                 hint="Only published events appear here."
               >
@@ -458,14 +471,16 @@ export default function ContributePage() {
                 <SelectField
                   id="contribute-album"
                   label="Album"
-                  optional
                   value={albumId}
                   disabled={submission !== null || starting}
+                  error={albumError ?? undefined}
+                  hint="Required. Photographs are published with the album they belong to."
                   onChange={(event) => {
                     setAlbumId(event.target.value)
+                    setAlbumError(null)
                   }}
                 >
-                  <option value="">No album</option>
+                  <option value="">Choose an album</option>
                   {albums.map((album) => (
                     <option key={album.id} value={album.id}>
                       {album.title}
@@ -473,10 +488,10 @@ export default function ContributePage() {
                   ))}
                 </SelectField>
               ) : selectedEvent ? (
-                <p className="text-sm text-archive-muted">
-                  This event has no published albums. Photographs will be
-                  attached to the event itself.
-                </p>
+                <Alert tone="warning" title="No published albums for this event">
+                  Photographs can only be contributed to an album. Ask an
+                  administrator to publish an album for this event first.
+                </Alert>
               ) : null}
 
               <TextAreaField

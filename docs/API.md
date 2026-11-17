@@ -206,6 +206,7 @@ Phase 03, Phase 04 and Phase 05 implement the archive, upload and governance end
 | `GET` | `/api/v1/events/slug/{slug}` | Published event details by slug |
 | `GET` | `/api/v1/albums/{id}` | Published album and its approved photos |
 | `GET` | `/api/v1/albums/slug/{slug}` | Published album by slug and its approved photos |
+| `GET` | `/api/v1/photos` | Newest approved photographs with album and event context |
 | `GET` | `/api/v1/photos/{id}` | Approved photo details |
 | `GET` | `/api/v1/academic-years` | Public academic timeline |
 | `GET` | `/api/v1/categories` | Public categories |
@@ -222,11 +223,13 @@ Phase 03, Phase 04 and Phase 05 implement the archive, upload and governance end
 
 `GET /albums/{id}` accepts `page` and `size` for approved photo pagination. Each public photo exposes display metadata plus `cloudinaryPublicId`, `format`, and an ordered `photographers` list (`creditName`, `creditOrder`). No delivery URL, uploader identity, submission, or moderation metadata is exposed. `GET /photos/{id}` returns a photo only when it satisfies the complete event/album/photo publication predicate. Public album photo results apply the same predicate.
 
+`GET /photos` accepts `page` (default `0`) and `size` (default `12`, clamped to `1–100`) and returns approved photographs ordered by `approvedAt` descending, then ID descending. Every item carries the same display metadata and ordered `photographers` list as the album read model, plus `approvedAt` and the `albumId`, `albumTitle`, `albumSlug`, `eventId`, `eventTitle`, and `eventSlug` needed to link back to the published album. The same publication predicate applies: the photograph, its album, and its event must all be published and not deleted. The homepage uses this endpoint for its "Recently added photographs" section.
+
 `GET /contributors` returns a paginated directory of published, non-deleted contributor profiles ordered by display name ascending, then ID ascending. It accepts `page` (default `0`) and `size` (default `24`, clamped to `1–100`). Each item exposes only `id`, `displayName`, `slug`, and `bio`; account identifiers, email addresses, and unpublished or deleted profiles never cross this boundary.
 
 ### Upload flow
 
-1. `POST /me/submissions` creates a pending submission owned by the authenticated user.
+1. `POST /me/submissions` creates a pending submission owned by the authenticated user. Both `eventId` and `albumId` are required, and the album must belong to the chosen event; submissions without an album return `400`.
 2. `POST /me/uploads/authorize` returns a short-lived signature, server-generated `publicId`, upload URL, Cloudinary API key, preset, expiry, 15 MB limit, and allowed formats.
 3. The client uploads bytes directly to Cloudinary; bytes never pass through the API.
 4. `POST /me/submissions/{id}/photos` accepts the authorization ID, returned public ID, display metadata, and at least one photographer credit. The server verifies the asset through Cloudinary before persisting a pending photo.
@@ -272,7 +275,7 @@ Governance rules:
 |---|---|---|---|
 | `GET` | `/api/v1/me` | Implemented | Current profile |
 | `PATCH` | `/api/v1/me` | Implemented | Update profile |
-| `POST` | `/api/v1/me/submissions` | Implemented | Create a submission targeting an event and optional album |
+| `POST` | `/api/v1/me/submissions` | Implemented | Create a submission targeting a published event and one of its albums |
 | `GET` | `/api/v1/me/submissions` | Implemented | List own submissions |
 | `POST` | `/api/v1/me/uploads/authorize` | Implemented | Request a short-lived signed Cloudinary upload |
 | `POST` | `/api/v1/me/submissions/{id}/photos` | Implemented | Verify and register an uploaded asset with metadata and photographer credits |

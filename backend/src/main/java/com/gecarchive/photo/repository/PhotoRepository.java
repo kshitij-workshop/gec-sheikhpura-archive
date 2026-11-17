@@ -85,4 +85,19 @@ public interface PhotoRepository extends JpaRepository<Photo, UUID> {
               and event.deletedAt is null
             """)
     Optional<Photo> findPublicById(@Param("photoId") UUID photoId);
+
+    @Query("""
+            select photo
+            from Photo photo
+            join photo.album album
+            join album.event event
+            where photo.status = com.gecarchive.photo.entity.PhotoStatus.APPROVED
+              and photo.deletedAt is null
+              and album.published = true
+              and album.deletedAt is null
+              and event.published = true
+              and event.deletedAt is null
+            order by photo.approvedAt desc, photo.id desc
+            """)
+    Page<Photo> findPublicRecentlyApproved(Pageable pageable);
 }

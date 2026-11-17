@@ -682,8 +682,22 @@ class ModerationIntegrationIT extends AbstractAuthIntegrationTest {
     }
 
     private Submitted submitPhoto(String auth, UUID eventId, UUID albumId) throws Exception {
-        String submissionId = createSubmission(auth, eventId, albumId);
-        return new Submitted(addPhoto(auth, submissionId), submissionId);
+        // Submissions now require an album. Legacy album-less photographs can
+        // still reach moderation, so simulate one by detaching the album after
+        // registration when a test asks for an album-less photo.
+        UUID submissionAlbumId = albumId;
+        if (submissionAlbumId == null) {
+            Event event = events.findById(eventId).orElseThrow();
+            submissionAlbumId = album(event, event.getCreatedBy()).getId();
+        }
+        String submissionId = createSubmission(auth, eventId, submissionAlbumId);
+        String photoId = addPhoto(auth, submissionId);
+        if (albumId == null) {
+            var photo = photos.findById(UUID.fromString(photoId)).orElseThrow();
+            photo.setAlbum(null);
+            photos.saveAndFlush(photo);
+        }
+        return new Submitted(photoId, submissionId);
     }
 
     private AcademicYear academicYear() {

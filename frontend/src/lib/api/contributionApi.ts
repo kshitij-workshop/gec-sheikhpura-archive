@@ -11,7 +11,7 @@ import type {
 
 export interface CreateSubmissionInput {
   eventId: string
-  albumId?: string | null
+  albumId: string
   note?: string | null
 }
 

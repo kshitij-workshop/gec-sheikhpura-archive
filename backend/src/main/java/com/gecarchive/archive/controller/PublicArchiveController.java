@@ -8,6 +8,7 @@ import com.gecarchive.archive.dto.AlbumDetailResponse;
 import com.gecarchive.archive.dto.CategoryResponse;
 import com.gecarchive.archive.dto.EventResponse;
 import com.gecarchive.archive.dto.PublicPhotoResponse;
+import com.gecarchive.archive.dto.RecentPhotoResponse;
 import com.gecarchive.archive.service.PublicArchiveService;
 import com.gecarchive.common.dto.PageResponse;
 
@@ -77,5 +78,12 @@ public class PublicArchiveController {
     @GetMapping("/photos/{id}")
     public PublicPhotoResponse photo(@PathVariable UUID id) {
         return archive.photo(id);
+    }
+
+    @GetMapping("/photos")
+    public PageResponse<RecentPhotoResponse> recentPhotos(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+        return archive.recentPhotos(page, size);
     }
 }

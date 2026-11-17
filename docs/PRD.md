@@ -44,7 +44,7 @@ Exactly four roles exist.
 
 ### 5.1 Browse the archive
 
-A visitor opens the homepage, explores featured events and albums, filters by academic year or category, opens an album, and views photographs in a responsive gallery and photo viewer.
+A visitor opens the homepage, explores recently added photographs and events, filters by academic year or category, opens an album, and views photographs in a responsive gallery and photo viewer.
 
 ### 5.2 Contribute photographs
 

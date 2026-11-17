@@ -111,6 +111,17 @@ export interface PublicPhoto {
   photographers: PublicPhotographerCredit[]
 }
 
+/** A published photograph with the album and event it belongs to. */
+export interface RecentPhoto extends PublicPhoto {
+  approvedAt: string
+  albumId: string
+  albumTitle: string
+  albumSlug: string
+  eventId: string
+  eventTitle: string
+  eventSlug: string
+}
+
 export interface AlbumDetail {
   id: string
   title: string

@@ -6,6 +6,7 @@ import type {
   Category,
   PageResponse,
   PublicContributor,
+  RecentPhoto,
 } from './types'
 
 export interface EventQuery {
@@ -77,6 +78,13 @@ export function fetchAlbumBySlug(
 
 export function fetchAcademicYears(): Promise<AcademicYear[]> {
   return publicRequest('academic-years')
+}
+
+export function fetchRecentPhotos(
+  page = 0,
+  size = 12,
+): Promise<PageResponse<RecentPhoto>> {
+  return publicRequest(`photos${toSearchParams({ page, size })}`)
 }
 
 export function fetchCategories(): Promise<Category[]> {

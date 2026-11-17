@@ -10,6 +10,7 @@ import type {
   ModerationPhoto,
   PublicContributor,
   PublicPhoto,
+  RecentPhoto,
   RegisteredPhoto,
   RemovalRequest,
   Submission,
@@ -81,6 +82,22 @@ export function makePhoto(overrides: Partial<PublicPhoto> = {}): PublicPhoto {
     takenAt: '2026-02-14T09:30:00Z',
     sortOrder: 0,
     photographers: [{ creditName: 'Asha Verma', creditOrder: 0 }],
+    ...overrides,
+  }
+}
+
+export function makeRecentPhoto(
+  overrides: Partial<RecentPhoto> = {},
+): RecentPhoto {
+  return {
+    ...makePhoto(),
+    approvedAt: '2026-02-16T09:00:00Z',
+    albumId: makeAlbumSummary().id,
+    albumTitle: makeAlbumSummary().title,
+    albumSlug: makeAlbumSummary().slug,
+    eventId: makeEvent().id,
+    eventTitle: makeEvent().title,
+    eventSlug: makeEvent().slug,
     ...overrides,
   }
 }

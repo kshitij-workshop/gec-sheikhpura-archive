@@ -6,6 +6,7 @@ import {
   fetchCategories,
   fetchEventBySlug,
   fetchEvents,
+  fetchRecentPhotos,
 } from '../../lib/api/archiveApi'
 import type { EventQuery } from '../../lib/api/archiveApi'
 import { retryUnlessNotFound } from '../../lib/api/retry'
@@ -15,6 +16,7 @@ export const archiveKeys = {
   event: (slug: string) => ['archive', 'event', slug] as const,
   album: (slug: string, page: number) =>
     ['archive', 'album', slug, page] as const,
+  recentPhotos: (size: number) => ['archive', 'recent-photos', size] as const,
   academicYears: ['archive', 'academic-years'] as const,
   categories: ['archive', 'categories'] as const,
 }
@@ -52,6 +54,15 @@ export function useAcademicYears() {
     queryKey: archiveKeys.academicYears,
     queryFn: fetchAcademicYears,
     staleTime: 5 * 60_000,
+  })
+}
+
+export function useRecentPhotos(size = 6) {
+  return useQuery({
+    queryKey: archiveKeys.recentPhotos(size),
+    queryFn: () => fetchRecentPhotos(0, size),
+    staleTime: 60_000,
+    retry: retryUnlessNotFound,
   })
 }
 
