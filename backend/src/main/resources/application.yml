@@ -113,8 +113,8 @@ app:
     max-file-size-bytes: ${APP_UPLOAD_MAX_FILE_SIZE_BYTES:15728640}
     max-photos-per-submission: ${APP_UPLOAD_MAX_PHOTOS_PER_SUBMISSION:50}
     authorization-ttl: ${APP_UPLOAD_AUTHORIZATION_TTL:10m}
-    authorize-per-user-per-hour: ${APP_UPLOAD_AUTHORIZE_PER_USER_PER_HOUR:20}
-    authorize-per-ip-per-hour: ${APP_UPLOAD_AUTHORIZE_PER_IP_PER_HOUR:40}
+    authorize-per-user-per-hour: ${APP_UPLOAD_AUTHORIZE_PER_USER_PER_HOUR:2000}
+    authorize-per-ip-per-hour: ${APP_UPLOAD_AUTHORIZE_PER_IP_PER_HOUR:4000}
     rate-limit-window: ${APP_UPLOAD_RATE_LIMIT_WINDOW:1h}
   cloudinary:
     cloud-name: ${CLOUDINARY_CLOUD_NAME:}
