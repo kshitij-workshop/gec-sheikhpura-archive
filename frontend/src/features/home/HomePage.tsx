@@ -154,7 +154,7 @@ export default function HomePage() {
                         {photo.title?.trim() || 'Untitled photograph'}
                       </p>
                       <p className="line-clamp-1 text-xs text-archive-muted">
-                        {photo.albumTitle}
+                        {photo.eventTitle} · {photo.albumTitle}
                       </p>
                     </figcaption>
                   </figure>

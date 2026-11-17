@@ -66,6 +66,9 @@ describe('HomePage', () => {
     expect(
       await screen.findByRole('link', { name: /Opening ceremony/ }),
     ).toHaveAttribute('href', '/albums/annual-sports-day')
+    expect(
+      screen.getByText('Founders Day · Annual Sports Day'),
+    ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Sports Day' })).toHaveAttribute(
       'href',
       '/events/sports-day',
