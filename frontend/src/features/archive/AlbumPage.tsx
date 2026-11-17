@@ -14,6 +14,7 @@ import { ApiError } from '../../lib/api/client'
 import { formatCredits, formatEventDate } from '../../lib/format'
 import { Breadcrumbs } from './components/Breadcrumbs'
 import { PhotoImage } from './components/PhotoImage'
+import { PhotoActions } from './components/PhotoActions'
 import { PhotoViewer } from './components/PhotoViewer'
 import { useAlbum } from './queries'
 
@@ -176,6 +177,11 @@ export default function AlbumPage() {
                         )}
                       </p>
                     </figcaption>
+                    <PhotoActions
+                      photo={photo}
+                      compact
+                      className="px-1 pb-1 pt-2"
+                    />
                   </figure>
                 </li>
               ))}

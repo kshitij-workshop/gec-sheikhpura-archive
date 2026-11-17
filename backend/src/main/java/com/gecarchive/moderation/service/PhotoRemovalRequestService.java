@@ -117,7 +117,8 @@ public class PhotoRemovalRequestService {
 
         Photo photo = request.getPhoto();
         if (target == RemovalRequestStatus.APPROVED && photo.getStatus() != PhotoStatus.REMOVED) {
-            moderation.applyAction(photo, ModerationAction.REMOVE, new ModerationActionRequest(note, null),
+            moderation.applyAction(photo, ModerationAction.REMOVE,
+                    new ModerationActionRequest(note, null, null, null, null, null),
                     actor, client);
         }
 

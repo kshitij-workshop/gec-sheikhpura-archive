@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   getModerationHistory,
   listAdminAlbums,
+  listAdminEvents,
   listModerationQueue,
 } from '../../lib/api/adminApi'
 import type { PhotoStatus } from '../../lib/api/types'
@@ -14,6 +15,7 @@ export const adminKeys = {
   moderationHistory: (photoId: string) =>
     ['admin', 'moderation-history', photoId] as const,
   eventAlbums: (eventId: string) => ['admin', 'albums', eventId] as const,
+  eventOptions: ['admin', 'event-options'] as const,
 }
 
 export function useModerationQueue(
@@ -43,5 +45,20 @@ export function useEventAlbums(eventId: string | null) {
     queryFn: () =>
       eventId === null ? Promise.resolve([]) : listAdminAlbums(eventId),
     enabled: eventId !== null,
+  })
+}
+
+/**
+ * Every event an administrator can file a photograph into.
+ *
+ * The administrative endpoint accepts up to 100 rows per page; one page is
+ * enough for the filing picker and avoids pagination state in a dialog.
+ */
+export function useAdminEvents() {
+  return useQuery({
+    queryKey: adminKeys.eventOptions,
+    queryFn: () => listAdminEvents(0, 100),
+    select: (page) => page.items,
+    staleTime: 60_000,
   })
 }

@@ -166,7 +166,7 @@ class SchemaConstraintIT extends AbstractDomainIntegrationTest {
     }
 
     @Test
-    void rejectsPhotoWhoseSubmissionBelongsToAnotherEvent() {
+    void allowsPhotoEventToDifferFromItsSubmissionEvent() {
         User admin = admin();
         User submitter = activeUser();
         var year = academicYear();
@@ -176,10 +176,15 @@ class SchemaConstraintIT extends AbstractDomainIntegrationTest {
         PhotoSubmission submissionForSecondEvent = submission(submitter, secondEvent, null);
         Photo photo = photo(submitter, firstEvent, null, PhotoStatus.PENDING);
 
+        // An administrator may re-file a photograph into another event. The
+        // submission stays attached as provenance; only the photo's event and
+        // album move together under photos_album_event_fk.
         photo.setSubmission(submissionForSecondEvent);
 
-        assertThatThrownBy(() -> photos.saveAndFlush(photo))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        Photo saved = photos.saveAndFlush(photo);
+
+        assertThat(saved.getSubmission().getId()).isEqualTo(submissionForSecondEvent.getId());
+        assertThat(saved.getEvent().getId()).isEqualTo(firstEvent.getId());
     }
 
     @Test

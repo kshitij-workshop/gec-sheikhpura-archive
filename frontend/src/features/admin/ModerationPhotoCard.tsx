@@ -104,6 +104,7 @@ function ModerationHistory({ photoId }: { photoId: string }) {
 export interface ModerationPhotoCardProps {
   photo: ModerationPhoto
   onAction: (photo: ModerationPhoto, action: ModerationAction) => void
+  onEdit: (photo: ModerationPhoto) => void
 }
 
 /**
@@ -116,6 +117,7 @@ export interface ModerationPhotoCardProps {
 export function ModerationPhotoCard({
   photo,
   onAction,
+  onEdit,
 }: ModerationPhotoCardProps) {
   const [historyOpen, setHistoryOpen] = useState(false)
   const preview = cloudinaryImageUrl(photo.cloudinaryPublicId, photo.format, {
@@ -245,6 +247,17 @@ export function ModerationPhotoCard({
                 </Button>
               )
             })}
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              aria-label={`Edit details: ${title}`}
+              onClick={() => {
+                onEdit(photo)
+              }}
+            >
+              Edit details
+            </Button>
           </div>
 
           <div className="space-y-3 border-t border-archive-line pt-3">

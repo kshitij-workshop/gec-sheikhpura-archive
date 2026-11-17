@@ -64,7 +64,7 @@ describe('HomePage', () => {
     renderApp({ path: '/' })
 
     expect(
-      await screen.findByRole('link', { name: /Opening ceremony/ }),
+      await screen.findByRole('link', { name: /students gathered/i }),
     ).toHaveAttribute('href', '/albums/annual-sports-day')
     expect(
       screen.getByText('Founders Day · Annual Sports Day'),
@@ -116,7 +116,7 @@ describe('HomePage', () => {
 
     renderApp({ path: '/' })
 
-    await screen.findByRole('link', { name: /Opening ceremony/ })
+    await screen.findByRole('link', { name: /students gathered/i })
 
     expect(screen.queryByText('Archive visitors')).not.toBeInTheDocument()
     expect(screen.queryByText('Visitors today')).not.toBeInTheDocument()

@@ -21,6 +21,7 @@ import com.gecarchive.common.security.ClientInfo;
 import com.gecarchive.moderation.dto.ModerationActionRequest;
 import com.gecarchive.moderation.dto.ModerationHistoryEntryResponse;
 import com.gecarchive.moderation.dto.ModerationPhotoResponse;
+import com.gecarchive.moderation.dto.UpdatePhotoRequest;
 import com.gecarchive.moderation.entity.ModerationAction;
 import com.gecarchive.moderation.entity.PhotoModeration;
 import com.gecarchive.moderation.repository.PhotoModerationRepository;
@@ -184,7 +185,7 @@ public class PhotoModerationService {
         User actorUser = user(actor.id());
 
         if (action == ModerationAction.APPROVE) {
-            applyApproval(photo, request == null ? null : request.albumId(), actorUser);
+            applyApproval(photo, request, actorUser);
         } else {
             photo.setStatus(to);
             if (to != PhotoStatus.APPROVED) {
@@ -200,24 +201,109 @@ public class PhotoModerationService {
         rederiveSubmission(photo);
     }
 
-    private void applyApproval(Photo photo, UUID albumId, User actorUser) {
-        Album album = albumId == null
+    private void applyApproval(Photo photo, ModerationActionRequest request, User actorUser) {
+        UUID requestedAlbumId = request == null ? null : request.albumId();
+        Album album = requestedAlbumId == null
                 ? photo.getAlbum()
-                : albums.findById(albumId)
+                : albums.findById(requestedAlbumId)
                         .orElseThrow(() -> new ResourceNotFoundException("Album not found."));
         if (album == null) {
             throw new BadRequestException("An album must be assigned before this photograph can be approved.");
         }
-        if (!album.getEvent().getId().equals(photo.getEvent().getId())) {
-            throw new BadRequestException("The selected album belongs to a different event.");
-        }
         if (album.isDeleted()) {
             throw new BadRequestException("The selected album is archived.");
         }
+        if (album.getEvent().isDeleted()) {
+            throw new BadRequestException("The selected album's event is archived.");
+        }
+        UUID requestedEventId = request == null ? null : request.eventId();
+        boolean movingToAnotherEvent = !album.getEvent().getId().equals(photo.getEvent().getId());
+        if (movingToAnotherEvent && requestedEventId == null) {
+            throw new BadRequestException("The selected album belongs to a different event.");
+        }
+        validateEventMatchesAlbum(requestedEventId, album);
+        if (request != null
+                && (request.title() != null || request.caption() != null || request.altText() != null)) {
+            applyMetadata(photo, request.title(), request.caption(), request.altText());
+        }
         photo.setAlbum(album);
+        photo.setEvent(album.getEvent());
         photo.setStatus(PhotoStatus.APPROVED);
         photo.setApprovedAt(Instant.now());
         photo.setApprovedBy(actorUser);
+    }
+
+    /**
+     * Lets an administrator re-file or retitle a photograph without changing
+     * its moderation status. The album determines the photograph's event;
+     * {@code eventId} is accepted only when it agrees with that album.
+     */
+    @Transactional
+    public ModerationPhotoResponse updateDetails(UUID photoId, UpdatePhotoRequest request,
+            AuthenticatedUser actor, ClientInfo client) {
+        Photo photo = photo(photoId);
+        if (photo.isDeleted()) {
+            throw new ConflictException("This photograph has been archived and can no longer be edited.");
+        }
+
+        Album album = albums.findById(request.albumId())
+                .orElseThrow(() -> new ResourceNotFoundException("Album not found."));
+        if (album.isDeleted()) {
+            throw new BadRequestException("The selected album is archived.");
+        }
+        if (album.getEvent().isDeleted()) {
+            throw new BadRequestException("The selected album's event is archived.");
+        }
+        validateEventMatchesAlbum(request.eventId(), album);
+
+        User actorUser = user(actor.id());
+        UUID beforeEventId = photo.getEvent().getId();
+        UUID beforeAlbumId = photo.getAlbum() == null ? null : photo.getAlbum().getId();
+        String beforeTitle = photo.getTitle();
+
+        photo.setAlbum(album);
+        photo.setEvent(album.getEvent());
+        applyMetadata(photo, request.title(), request.caption(), request.altText());
+        photos.save(photo);
+
+        Map<String, Object> before = new LinkedHashMap<>();
+        before.put("eventId", beforeEventId);
+        if (beforeAlbumId != null) {
+            before.put("albumId", beforeAlbumId);
+        }
+        if (beforeTitle != null) {
+            before.put("title", beforeTitle);
+        }
+        Map<String, Object> after = new LinkedHashMap<>();
+        after.put("eventId", photo.getEvent().getId());
+        after.put("albumId", photo.getAlbum().getId());
+        if (photo.getTitle() != null) {
+            after.put("title", photo.getTitle());
+        }
+        audit.record(actorUser, "PHOTO_DETAILS_UPDATED", "PHOTO", photo.getId(), before, after, client);
+
+        return ModerationPhotoResponse.from(photo,
+                photographers.findByPhoto_IdOrderByCreditOrderAsc(photo.getId()));
+    }
+
+    private void validateEventMatchesAlbum(UUID requestedEventId, Album album) {
+        if (requestedEventId != null && !requestedEventId.equals(album.getEvent().getId())) {
+            throw new BadRequestException("The selected album belongs to a different event.");
+        }
+    }
+
+    private void applyMetadata(Photo photo, String title, String caption, String altText) {
+        photo.setTitle(trimToNull(title));
+        photo.setCaption(trimToNull(caption));
+        photo.setAltText(trimToNull(altText));
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private void recordModeration(Photo photo, ModerationAction action, PhotoStatus from, PhotoStatus to,

@@ -115,48 +115,69 @@ public class PublicArchiveService {
 
     @Transactional(readOnly = true)
     public AlbumDetailResponse album(UUID id, int page, int size) {
+        return album(id, page, size, null);
+    }
+
+    @Transactional(readOnly = true)
+    public AlbumDetailResponse album(UUID id, int page, int size, UUID viewerId) {
         Album album = albums.findByIdAndPublishedTrueAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Album not found."));
         Event event = album.getEvent();
         if (!event.isPublished() || event.isDeleted()) throw new ResourceNotFoundException("Album not found.");
         var result = photos.findPublicByAlbumId(id, PageRequest.of(Math.max(0, page), bounded(size),
                 Sort.by("sortOrder").ascending().and(Sort.by("createdAt").ascending())));
-        return AlbumDetailResponse.from(album, eventResponse(event), publicPhotos(result));
+        return AlbumDetailResponse.from(album, eventResponse(event), publicPhotos(result, viewerId));
     }
 
     @Transactional(readOnly = true)
     public AlbumDetailResponse albumBySlug(String slug, int page, int size) {
+        return albumBySlug(slug, page, size, null);
+    }
+
+    @Transactional(readOnly = true)
+    public AlbumDetailResponse albumBySlug(String slug, int page, int size, UUID viewerId) {
         Album album = albums.findBySlugAndPublishedTrueAndDeletedAtIsNull(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Album not found."));
-        return album(album.getId(), page, size);
+        return album(album.getId(), page, size, viewerId);
     }
 
     @Transactional(readOnly = true)
     public PublicPhotoResponse photo(UUID id) {
+        return photo(id, null);
+    }
+
+    @Transactional(readOnly = true)
+    public PublicPhotoResponse photo(UUID id, UUID viewerId) {
         Photo photo = photos.findPublicById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Photo not found."));
-        return PublicPhotoResponse.from(photo, photographers.findByPhoto_IdOrderByCreditOrderAsc(id));
+        return PublicPhotoResponse.from(photo,
+                photographers.findByPhoto_IdOrderByCreditOrderAsc(id), viewerId);
     }
 
     @Transactional(readOnly = true)
     public PageResponse<RecentPhotoResponse> recentPhotos(int page, int size) {
+        return recentPhotos(page, size, null);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<RecentPhotoResponse> recentPhotos(int page, int size, UUID viewerId) {
         var result = photos.findPublicRecentlyApproved(
                 PageRequest.of(Math.max(0, page), bounded(size)));
         Map<UUID, List<PhotoPhotographer>> creditsByPhoto = creditsByPhoto(
                 result.getContent().stream().map(Photo::getId).toList());
         return PageResponse.from(result, photo -> RecentPhotoResponse.from(photo,
-                creditsByPhoto.getOrDefault(photo.getId(), List.of())));
+                creditsByPhoto.getOrDefault(photo.getId(), List.of()), viewerId));
     }
 
     /**
      * Adds photographer credits to a page of public photos with one batched
      * query, so gallery pages do not issue a credit query per photograph.
      */
-    private PageResponse<PublicPhotoResponse> publicPhotos(Page<Photo> page) {
+    private PageResponse<PublicPhotoResponse> publicPhotos(Page<Photo> page, UUID viewerId) {
         Map<UUID, List<PhotoPhotographer>> creditsByPhoto = creditsByPhoto(
                 page.getContent().stream().map(Photo::getId).toList());
         return PageResponse.from(page, photo -> PublicPhotoResponse.from(photo,
-                creditsByPhoto.getOrDefault(photo.getId(), List.of())));
+                creditsByPhoto.getOrDefault(photo.getId(), List.of()), viewerId));
     }
 
     private Map<UUID, List<PhotoPhotographer>> creditsByPhoto(List<UUID> photoIds) {

@@ -30,13 +30,18 @@ public record RecentPhotoResponse(
         UUID eventId,
         String eventTitle,
         String eventSlug,
-        List<PublicPhotographerCredit> photographers) {
+        List<PublicPhotographerCredit> photographers,
+        boolean viewerCanRequestRemoval) {
 
     public RecentPhotoResponse {
         photographers = List.copyOf(photographers);
     }
 
     public static RecentPhotoResponse from(Photo photo, List<PhotoPhotographer> credits) {
+        return from(photo, credits, null);
+    }
+
+    public static RecentPhotoResponse from(Photo photo, List<PhotoPhotographer> credits, UUID viewerId) {
         var album = photo.getAlbum();
         var event = photo.getEvent();
         return new RecentPhotoResponse(photo.getId(), photo.getTitle(), photo.getCaption(), photo.getAltText(),
@@ -44,6 +49,7 @@ public record RecentPhotoResponse(
                 photo.getTakenAt(), photo.getSortOrder(), photo.getApprovedAt(),
                 album.getId(), album.getTitle(), album.getSlug(),
                 event.getId(), event.getTitle(), event.getSlug(),
-                credits.stream().map(PublicPhotographerCredit::from).toList());
+                credits.stream().map(PublicPhotographerCredit::from).toList(),
+                viewerId != null && viewerId.equals(photo.getUploadedBy().getId()));
     }
 }

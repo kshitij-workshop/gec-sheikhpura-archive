@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-Phase 01 defines the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication schema and security state. Phase 03 activates archive management and public reads. Phase 04 adds upload authorization state and activates submission/photo registration through trusted Cloudinary verification. Phase 05 activates the existing moderation schema: photo transitions, reports, removal requests, event suggestions, audit-log reads, and analytics. No new migration was required because V2 already defines every governance table with append-only triggers.
+Phase 01 defines the domain schema, JPA entities, repositories, and shared DTO foundation. Phase 02 adds authentication schema and security state. Phase 03 activates archive management and public reads. Phase 04 adds upload authorization state and activates submission/photo registration through trusted Cloudinary verification. Phase 05 activates the existing moderation schema: photo transitions, reports, removal requests, event suggestions, audit-log reads, and analytics. No new migration was required because V2 already defines every governance table with append-only triggers. Release-hardening migrations then added per-event album titles (V5), anonymous visitor counters (V6), Google sign-in (V7), and the decoupling of a photograph's event from its submission so administrators can correct the filing (V8).
 
 Flyway migrations are the only source of schema truth. Hibernate runs with `ddl-auto=validate`; it never creates or alters tables.
 
@@ -112,6 +112,7 @@ erDiagram
 - `photos.album_id` is nullable while a photo is pending.
 - Once approved, `photos.album_id` is required.
 - A composite foreign key `(album_id, event_id)` ensures the album belongs to the photo's event.
+- The submission link records provenance only. A photograph may be re-filed into another event by an administrator, so the submission's event and the photograph's event can differ after a correction.
 - A check constraint enforces `status <> 'APPROVED' OR album_id IS NOT NULL`.
 - Albums are created and published by administrators.
 - Users may target an existing album during submission but cannot create albums.
@@ -133,7 +134,7 @@ Phase 05 activates this design:
 - Registration writes the opening `SUBMIT` moderation row, so every history starts with the original contribution.
 - The allowed transition table lives in `PhotoModerationService`; any other pairing returns `409`. The `photos.version` column supplies optimistic locking for concurrent actions.
 - `approved_at` and `approved_by_user_id` are set on approval and cleared whenever a photo leaves `APPROVED`, so the database check constraints always hold.
-- Approval requires `album_id` from the photo's own event, satisfying the composite `(album_id, event_id)` foreign key.
+- Approval and `PATCH /admin/photos/{id}` accept an album from any event. The selected album decides the photograph's event, and `V8__photo_event_decoupled_from_submission.sql` replaced the old `(submission_id, event_id)` foreign key with a submission-only key so a deliberate re-filing correction can cross events. `photos_album_event_fk` still guarantees `photos.event_id = albums.event_id`.
 - Submission status is re-derived after each transition: all photos `PENDING` → `PENDING`; no photos `PENDING`/`FLAGGED` → `COMPLETED`; otherwise `IN_REVIEW`. `WITHDRAWN` is never overwritten.
 - Moderation never sets `photos.deleted_at`; status alone governs visibility, and `deleted_at` stays reserved for archive-level soft deletion.
 - Reports, removal requests, and event suggestions are versioned with `version`, so concurrent administrative updates surface as `409` rather than a lost write.

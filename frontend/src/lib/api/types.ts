@@ -109,6 +109,11 @@ export interface PublicPhoto {
   takenAt: string | null
   sortOrder: number
   photographers: PublicPhotographerCredit[]
+  /**
+   * True only for the uploader of this photograph. The server decides this per
+   * request; it is a usability hint, never an authorization check.
+   */
+  viewerCanRequestRemoval: boolean
 }
 
 /** A published photograph with the album and event it belongs to. */
@@ -217,6 +222,27 @@ export interface RemovalRequest {
   requestedByUserId: string
   reason: string
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  resolutionNote: string | null
+  handledByUserId: string | null
+  handledAt: string | null
+  createdAt: string
+}
+
+export type ReportCategory =
+  | 'INAPPROPRIATE'
+  | 'COPYRIGHT'
+  | 'PRIVACY'
+  | 'MISATTRIBUTION'
+  | 'OTHER'
+
+/** A visitor's report against a publicly visible photograph. */
+export interface PhotoReport {
+  id: string
+  photoId: string
+  reportedByUserId: string
+  category: ReportCategory
+  details: string | null
+  status: 'PENDING' | 'UNDER_REVIEW' | 'RESOLVED' | 'DISMISSED'
   resolutionNote: string | null
   handledByUserId: string | null
   handledAt: string | null

@@ -734,3 +734,27 @@ Students expect to sign in with the Google account their college already uses, a
 - Revoking access happens in the archive (suspend the account), not at Google; there is no token to revoke because no long-lived Google credential is stored.
 - Google can change its claims or rotate keys. Keys are fetched from Google's JWKS endpoint, so rotation is handled automatically; a new required claim would need a code change.
 - Tests cannot reach Google, so the verifier is replaced in integration tests and the real JWKS path is covered by manual verification with a real client ID.
+
+## ADR-0026 — Administrator re-filing and viewer-aware public actions
+
+**Status:** Accepted
+
+### Context
+
+Moderation often finds a photograph in the wrong event or album, or with a title that misdescribes it. Fixing that used to mean rejecting the submission and asking the uploader to start again. Separately, the archive told visitors that they could report photographs, but the public UI exposed no report or removal action next to an image.
+
+### Decision
+
+- Approval accepts `albumId`, an optional `eventId`, and optional `title`, `caption`, and `altText`. A separate `PATCH /admin/photos/{id}` applies the same filing and detail edits without a transition.
+- The album decides the photograph's event. `eventId` is accepted only as a consistency check, and is required when the album belongs to a different event than the photograph's current one.
+- Every filing change is authorized on the server, recorded in the audit log as `PHOTO_DETAILS_UPDATED`, and never changes the moderation status.
+- Migration `V8__photo_event_decoupled_from_submission.sql` replaces the `(submission_id, event_id)` foreign key with a submission-only key. The submission stays as provenance, and `photos_album_event_fk` continues to guarantee that the photo's event matches its album's event.
+- Public album, photo, and recent-photo reads accept an optional bearer token and return `viewerCanRequestRemoval`. Only the uploader's requests receive `true`; uploader identity is still never exposed.
+- Every published photograph renders a report action for signed-in users and a removal action only for the uploader. Guests receive a sign-in link that returns to the current page. Both actions are usability only; the API authorizes and validates them again.
+
+### Consequences
+
+- Administrators can correct a mis-filed contribution without destroying its submission, photographer credits, and moderation history.
+- A photograph may now have an event different from its submission's event. The submission remains a record of how the contribution arrived, not a constraint on where the photograph belongs.
+- Public pages send a bearer token when one exists. Query keys include the viewer identity, so a guest cache is never reused after sign-in.
+- Reporting remains authenticated; anonymous reporting still needs abuse controls and is deferred.

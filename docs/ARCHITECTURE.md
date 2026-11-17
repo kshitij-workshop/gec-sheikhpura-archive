@@ -131,8 +131,10 @@ Phase 05 implementation:
 
 1. `UploadService` registers a `PENDING` photo and writes the opening `SUBMIT` history row.
 2. `AdminModerationController` exposes the queue and the six transitions under `/api/v1/admin`, which requires `ADMIN` or `SUPER_ADMIN` at the URL level.
-3. `PhotoModerationService` owns the transition table, validates album/event agreement on approval, writes the moderation and audit rows, and re-derives the submission status — all in one transaction.
+3. `PhotoModerationService` owns the transition table, validates album/event agreement on approval and on administrative re-filing, writes the moderation and audit rows, and re-derives the submission status — all in one transaction.
 4. `PhotoReportService` accepts reports only for publicly visible photographs; `PhotoRemovalRequestService` restricts requests to the uploader and reuses `PhotoModerationService` on approval so both entry points share one history format.
+5. Public album, photo, and recent-photo reads accept an optional authenticated viewer and return a boolean `viewerCanRequestRemoval`; the uploader identity itself stays private.
+6. `PATCH /admin/photos/{id}` re-files or retitles a photograph without a transition. A cross-event re-filing is deliberate and audited; the submission remains as provenance.
 5. `EventSuggestionService` reviews suggestions and optionally creates an unpublished draft event through `ArchiveAdminService`.
 6. `AuditLogQueryService` and `AnalyticsService` provide read-only administrative views over the append-only audit trail and status counters.
 7. Every state-changing request is validated and authorized on the server; frontend guards are usability only.

@@ -2,8 +2,10 @@ import { apiRequest } from './client'
 import type {
   EventSuggestion,
   PageResponse,
+  PhotoReport,
   RegisteredPhoto,
   RemovalRequest,
+  ReportCategory,
   Submission,
   UploadAuthorization,
   UserPhoto,
@@ -100,6 +102,26 @@ export function requestRemoval(
   return apiRequest<RemovalRequest>(
     `/me/photos/${encodeURIComponent(photoId)}/removal-request`,
     { method: 'POST', body: { reason } },
+  )
+}
+
+export interface ReportPhotoInput {
+  category: ReportCategory
+  details?: string | null
+}
+
+/**
+ * Reports a published photograph. Requires a signed-in account; the server
+ * refuses reports against photographs that are not publicly visible and
+ * rejects a second open report from the same account.
+ */
+export function reportPhoto(
+  photoId: string,
+  input: ReportPhotoInput,
+): Promise<PhotoReport> {
+  return apiRequest<PhotoReport>(
+    `/photos/${encodeURIComponent(photoId)}/reports`,
+    { method: 'POST', body: input },
   )
 }
 

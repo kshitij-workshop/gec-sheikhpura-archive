@@ -3,6 +3,7 @@ import { useEffect, useId, useRef } from 'react'
 import { Button } from '../../../components/ui'
 import type { PublicPhoto } from '../../../lib/api/types'
 import { formatCredits, formatTimestamp } from '../../../lib/format'
+import { PhotoActions } from './PhotoActions'
 import { PhotoImage } from './PhotoImage'
 
 export interface PhotoViewerProps {
@@ -74,6 +75,15 @@ export function PhotoViewer({
         onClose()
       }}
       onKeyDown={(event) => {
+        // Controls inside a nested dialog (report, removal) must not navigate
+        // or close the viewer: stop once the event leaves the viewer itself.
+        const origin =
+          event.target instanceof Element
+            ? event.target.closest('dialog')
+            : null
+        if (origin !== null && origin !== ref.current) {
+          return
+        }
         if (event.key === 'Escape') {
           event.preventDefault()
           onClose()
@@ -145,6 +155,8 @@ export function PhotoViewer({
               {formatCredits(photo.photographers.map((credit) => credit.creditName))}
               {photo.takenAt ? ` · Taken ${formatTimestamp(photo.takenAt)}` : ''}
             </p>
+
+            <PhotoActions key={photo.id} photo={photo} className="pt-1" />
 
             <div className="flex items-center justify-between gap-2 pt-1">
               <Button

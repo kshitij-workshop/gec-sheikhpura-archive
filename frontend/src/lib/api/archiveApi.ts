@@ -47,6 +47,16 @@ function publicRequest<T>(path: string): Promise<T> {
   return apiRequest<T>(path, { auth: false })
 }
 
+/**
+ * Public reads that adapt to the caller. Guests and signed-in visitors see the
+ * same archive, but the server marks a photograph the viewer uploaded so the
+ * page can offer a removal request. `authRequest` still works for guests
+ * because `apiRequest` only attaches a token when one is held in memory.
+ */
+function viewerAwareRequest<T>(path: string): Promise<T> {
+  return apiRequest<T>(path)
+}
+
 export function fetchEvents(
   query: EventQuery = {},
 ): Promise<PageResponse<ArchiveEvent>> {
@@ -71,7 +81,7 @@ export function fetchAlbumBySlug(
   page = 0,
   size = 24,
 ): Promise<AlbumDetail> {
-  return publicRequest(
+  return viewerAwareRequest(
     `albums/slug/${encodeURIComponent(slug)}${toSearchParams({ page, size })}`,
   )
 }
@@ -84,7 +94,7 @@ export function fetchRecentPhotos(
   page = 0,
   size = 12,
 ): Promise<PageResponse<RecentPhoto>> {
-  return publicRequest(`photos${toSearchParams({ page, size })}`)
+  return viewerAwareRequest(`photos${toSearchParams({ page, size })}`)
 }
 
 export function fetchCategories(): Promise<Category[]> {

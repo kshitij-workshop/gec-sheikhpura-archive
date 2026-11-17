@@ -10,13 +10,25 @@ import {
 } from '../../lib/api/archiveApi'
 import type { EventQuery } from '../../lib/api/archiveApi'
 import { retryUnlessNotFound } from '../../lib/api/retry'
+import { useAuth } from '../auth/useAuth'
+
+/**
+ * Public archive reads depend on who is signed in only because the server
+ * marks photographs uploaded by the viewer. Guest and member caches must stay
+ * separate so a guest's "no removal action" payload is never reused after
+ * sign-in.
+ */
+function viewerKey(userId: string | undefined): string {
+  return userId ?? 'guest'
+}
 
 export const archiveKeys = {
   events: (query: EventQuery) => ['archive', 'events', query] as const,
   event: (slug: string) => ['archive', 'event', slug] as const,
-  album: (slug: string, page: number) =>
-    ['archive', 'album', slug, page] as const,
-  recentPhotos: (size: number) => ['archive', 'recent-photos', size] as const,
+  album: (slug: string, page: number, viewer: string) =>
+    ['archive', 'album', slug, page, viewer] as const,
+  recentPhotos: (size: number, viewer: string) =>
+    ['archive', 'recent-photos', size, viewer] as const,
   academicYears: ['archive', 'academic-years'] as const,
   categories: ['archive', 'categories'] as const,
 }
@@ -40,8 +52,10 @@ export function useEvent(slug: string | undefined) {
 }
 
 export function useAlbum(slug: string | undefined, page: number) {
+  const { user } = useAuth()
+
   return useQuery({
-    queryKey: archiveKeys.album(slug ?? '', page),
+    queryKey: archiveKeys.album(slug ?? '', page, viewerKey(user?.id)),
     queryFn: () => fetchAlbumBySlug(slug!, page),
     enabled: Boolean(slug),
     placeholderData: keepPreviousData,
@@ -58,8 +72,10 @@ export function useAcademicYears() {
 }
 
 export function useRecentPhotos(size = 6) {
+  const { user } = useAuth()
+
   return useQuery({
-    queryKey: archiveKeys.recentPhotos(size),
+    queryKey: archiveKeys.recentPhotos(size, viewerKey(user?.id)),
     queryFn: () => fetchRecentPhotos(0, size),
     staleTime: 60_000,
     retry: retryUnlessNotFound,

@@ -20,8 +20,31 @@ export interface ModerationQueueQuery {
 export interface ModerationInput {
   /** Required by the server for every action except approval. */
   reason?: string | null
-  /** Only consumed by approval, and only when the photo has no album yet. */
+  /**
+   * Consumed by approval. Assigns or moves the photograph; when omitted the
+   * photograph keeps its current album.
+   */
   albumId?: string | null
+  /**
+   * Optional consistency check for approval. It must match the selected
+   * album's event, and it is required when the album belongs to a different
+   * event than the photograph's current one.
+   */
+  eventId?: string | null
+  /** Approval-only display detail edits. Omitted values are left untouched. */
+  title?: string | null
+  caption?: string | null
+  altText?: string | null
+}
+
+/** Administrator edit of a photograph's filing and display details. */
+export interface UpdatePhotoInput {
+  albumId: string
+  /** Must match the selected album's event when supplied. */
+  eventId?: string | null
+  title?: string | null
+  caption?: string | null
+  altText?: string | null
 }
 
 function toQuery(values: Record<string, string | number | undefined>): string {
@@ -78,6 +101,20 @@ export function moderatePhoto(
 export function listAdminAlbums(eventId: string): Promise<AdminAlbum[]> {
   return apiRequest<AdminAlbum[]>(
     `/admin/albums${toQuery({ eventId })}`,
+  )
+}
+
+/**
+ * Re-files or retitles a photograph without changing its moderation status.
+ * The album decides the photograph's event; `eventId` is a consistency check.
+ */
+export function updatePhoto(
+  photoId: string,
+  input: UpdatePhotoInput,
+): Promise<ModerationPhoto> {
+  return apiRequest<ModerationPhoto>(
+    `/admin/photos/${encodeURIComponent(photoId)}`,
+    { method: 'PATCH', body: input },
   )
 }
 

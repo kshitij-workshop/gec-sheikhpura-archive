@@ -10,6 +10,7 @@ import {
   buttonStyles,
 } from '../../components/ui'
 import { EventCard } from '../archive/components/EventCard'
+import { PhotoActions } from '../archive/components/PhotoActions'
 import { PhotoImage } from '../archive/components/PhotoImage'
 import { useAcademicYears, useEvents, useRecentPhotos } from '../archive/queries'
 
@@ -135,30 +136,37 @@ export default function HomePage() {
           <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {recentPhotos.data.items.map((photo) => (
               <li key={photo.id}>
-                <Link
-                  to={`/albums/${photo.albumSlug}`}
-                  className="group block h-full rounded-lg border border-archive-line bg-white p-2 shadow-[0_1px_2px_rgba(28,25,23,0.06),0_10px_24px_-14px_rgba(28,25,23,0.28)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(28,25,23,0.08),0_18px_34px_-16px_rgba(28,25,23,0.38)]"
-                >
-                  <figure className="h-full">
-                    <span className="block overflow-hidden rounded-[3px] bg-stone-100">
-                      <PhotoImage
-                        photo={photo}
-                        width={320}
-                        height={320}
-                        crop="fill"
-                        className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                      />
-                    </span>
-                    <figcaption className="mt-2 space-y-0.5 px-1 pb-1">
-                      <p className="line-clamp-1 font-serif text-sm font-medium leading-snug text-archive-ink">
-                        {photo.title?.trim() || 'Untitled photograph'}
-                      </p>
-                      <p className="line-clamp-1 text-xs text-archive-muted">
-                        {photo.eventTitle} · {photo.albumTitle}
-                      </p>
-                    </figcaption>
-                  </figure>
-                </Link>
+                <div className="flex h-full flex-col rounded-lg border border-archive-line bg-white p-2 shadow-[0_1px_2px_rgba(28,25,23,0.06),0_10px_24px_-14px_rgba(28,25,23,0.28)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(28,25,23,0.08),0_18px_34px_-16px_rgba(28,25,23,0.38)]">
+                  <Link
+                    to={`/albums/${photo.albumSlug}`}
+                    className="group block"
+                  >
+                    <figure>
+                      <span className="block overflow-hidden rounded-[3px] bg-stone-100">
+                        <PhotoImage
+                          photo={photo}
+                          width={320}
+                          height={320}
+                          crop="fill"
+                          className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                        />
+                      </span>
+                      <figcaption className="mt-2 space-y-0.5 px-1 pb-1">
+                        <p className="line-clamp-1 font-serif text-sm font-medium leading-snug text-archive-ink">
+                          {photo.title?.trim() || 'Untitled photograph'}
+                        </p>
+                        <p className="line-clamp-1 text-xs text-archive-muted">
+                          {photo.eventTitle} · {photo.albumTitle}
+                        </p>
+                      </figcaption>
+                    </figure>
+                  </Link>
+                  <PhotoActions
+                    photo={photo}
+                    compact
+                    className="mt-auto px-1 pb-1 pt-2"
+                  />
+                </div>
               </li>
             ))}
           </ul>

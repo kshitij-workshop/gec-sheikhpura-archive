@@ -14,6 +14,7 @@ import type { ModerationAction, ModerationPhoto, PhotoStatus } from '../../lib/a
 import { requestFailureMessage } from '../../lib/api/errorMessage'
 import { ModerationActionDialog } from './ModerationActionDialog'
 import { ModerationPhotoCard } from './ModerationPhotoCard'
+import { PhotoEditDialog } from './PhotoEditDialog'
 import { useModerationQueue } from './queries'
 
 const PAGE_SIZE = 10
@@ -80,6 +81,7 @@ export default function ModerationQueuePage() {
     photo: ModerationPhoto
     action: ModerationAction
   } | null>(null)
+  const [editing, setEditing] = useState<ModerationPhoto | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
   const queue = useModerationQueue(status, page, PAGE_SIZE)
@@ -111,6 +113,11 @@ export default function ModerationQueuePage() {
   const openAction = (photo: ModerationPhoto, action: ModerationAction) => {
     setNotice(null)
     setTarget({ photo, action })
+  }
+
+  const openEdit = (photo: ModerationPhoto) => {
+    setNotice(null)
+    setEditing(photo)
   }
 
   const empty = queue.data ? emptyCopy(status) : null
@@ -212,7 +219,11 @@ export default function ModerationQueuePage() {
           <ul className={queue.isFetching ? 'space-y-3 opacity-60' : 'space-y-3'}>
             {queue.data.items.map((photo) => (
               <li key={photo.id}>
-                <ModerationPhotoCard photo={photo} onAction={openAction} />
+                <ModerationPhotoCard
+                  photo={photo}
+                  onAction={openAction}
+                  onEdit={openEdit}
+                />
               </li>
             ))}
           </ul>
@@ -236,6 +247,20 @@ export default function ModerationQueuePage() {
           }}
           onModerated={(message) => {
             setTarget(null)
+            setNotice(message)
+          }}
+        />
+      ) : null}
+
+      {editing ? (
+        <PhotoEditDialog
+          key={`edit-${editing.id}`}
+          photo={editing}
+          onClose={() => {
+            setEditing(null)
+          }}
+          onSaved={(message) => {
+            setEditing(null)
             setNotice(message)
           }}
         />

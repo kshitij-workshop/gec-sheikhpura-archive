@@ -18,16 +18,22 @@ public record PublicPhotoResponse(
         int heightPx,
         Instant takenAt,
         int sortOrder,
-        List<PublicPhotographerCredit> photographers) {
+        List<PublicPhotographerCredit> photographers,
+        boolean viewerCanRequestRemoval) {
 
     public PublicPhotoResponse {
         photographers = List.copyOf(photographers);
     }
 
     public static PublicPhotoResponse from(Photo photo, List<PhotoPhotographer> credits) {
+        return from(photo, credits, null);
+    }
+
+    public static PublicPhotoResponse from(Photo photo, List<PhotoPhotographer> credits, UUID viewerId) {
         return new PublicPhotoResponse(photo.getId(), photo.getTitle(), photo.getCaption(), photo.getAltText(),
                 photo.getCloudinaryPublicId(), photo.getFormat(), photo.getWidthPx(), photo.getHeightPx(),
                 photo.getTakenAt(), photo.getSortOrder(),
-                credits.stream().map(PublicPhotographerCredit::from).toList());
+                credits.stream().map(PublicPhotographerCredit::from).toList(),
+                viewerId != null && viewerId.equals(photo.getUploadedBy().getId()));
     }
 }

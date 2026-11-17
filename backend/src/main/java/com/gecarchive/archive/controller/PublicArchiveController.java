@@ -11,7 +11,9 @@ import com.gecarchive.archive.dto.PublicPhotoResponse;
 import com.gecarchive.archive.dto.RecentPhotoResponse;
 import com.gecarchive.archive.service.PublicArchiveService;
 import com.gecarchive.common.dto.PageResponse;
+import com.gecarchive.common.security.AuthenticatedUser;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -63,27 +65,35 @@ public class PublicArchiveController {
     public AlbumDetailResponse album(
             @PathVariable UUID id,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "24") int size) {
-        return archive.album(id, page, size);
+            @RequestParam(defaultValue = "24") int size,
+            @AuthenticationPrincipal AuthenticatedUser viewer) {
+        return archive.album(id, page, size, viewerId(viewer));
     }
 
     @GetMapping("/albums/slug/{slug}")
     public AlbumDetailResponse albumBySlug(
             @PathVariable String slug,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "24") int size) {
-        return archive.albumBySlug(slug, page, size);
+            @RequestParam(defaultValue = "24") int size,
+            @AuthenticationPrincipal AuthenticatedUser viewer) {
+        return archive.albumBySlug(slug, page, size, viewerId(viewer));
     }
 
     @GetMapping("/photos/{id}")
-    public PublicPhotoResponse photo(@PathVariable UUID id) {
-        return archive.photo(id);
+    public PublicPhotoResponse photo(@PathVariable UUID id,
+            @AuthenticationPrincipal AuthenticatedUser viewer) {
+        return archive.photo(id, viewerId(viewer));
     }
 
     @GetMapping("/photos")
     public PageResponse<RecentPhotoResponse> recentPhotos(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size) {
-        return archive.recentPhotos(page, size);
+            @RequestParam(defaultValue = "12") int size,
+            @AuthenticationPrincipal AuthenticatedUser viewer) {
+        return archive.recentPhotos(page, size, viewerId(viewer));
+    }
+
+    private static UUID viewerId(AuthenticatedUser viewer) {
+        return viewer == null ? null : viewer.id();
     }
 }

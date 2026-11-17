@@ -223,6 +223,8 @@ Phase 03, Phase 04 and Phase 05 implement the archive, upload and governance end
 
 `GET /albums/{id}` accepts `page` and `size` for approved photo pagination. Each public photo exposes display metadata plus `cloudinaryPublicId`, `format`, and an ordered `photographers` list (`creditName`, `creditOrder`). No delivery URL, uploader identity, submission, or moderation metadata is exposed. `GET /photos/{id}` returns a photo only when it satisfies the complete event/album/photo publication predicate. Public album photo results apply the same predicate.
 
+The public album, photo, and recent-photo reads accept an optional bearer token. The archive looks identical for guests and members, but when the caller uploaded the photograph the response sets `viewerCanRequestRemoval: true`; every other caller, including other signed-in members, receives `false`. The flag is a usability hint computed server-side on each request; removal itself is authorized again by `POST /me/photos/{id}/removal-request`. The server never exposes the uploader's identity.
+
 `GET /photos` accepts `page` (default `0`) and `size` (default `12`, clamped to `1–100`) and returns approved photographs ordered by `approvedAt` descending, then ID descending. Every item carries the same display metadata and ordered `photographers` list as the album read model, plus `approvedAt` and the `albumId`, `albumTitle`, `albumSlug`, `eventId`, `eventTitle`, and `eventSlug` needed to link back to the published album. The same publication predicate applies: the photograph, its album, and its event must all be published and not deleted. The homepage uses this endpoint for its "Recently added photographs" section.
 
 `GET /contributors` returns a paginated directory of published, non-deleted contributor profiles ordered by display name ascending, then ID ascending. It accepts `page` (default `0`) and `size` (default `24`, clamped to `1–100`). Each item exposes only `id`, `displayName`, `slug`, and `bio`; account identifiers, email addresses, and unpublished or deleted profiles never cross this boundary.
@@ -242,7 +244,7 @@ Upload authorizations expire after 10 minutes, are single-use, are bound to the 
 
 1. Registration persists a `PENDING` photograph and writes the opening `SUBMIT` moderation record.
 2. `GET /admin/moderation/photos?status=PENDING` returns the oldest-first queue with photographer credits for attribution review. Each item also carries `eventTitle`, `albumTitle`, `cloudinaryPublicId`, and `format` so an administrator can recognise the photograph before approving it.
-3. `POST /admin/photos/{id}/{approve|reject|flag|hide|remove|restore}` transitions the photograph. Every transition writes a `photo_moderations` row, an audit row, and re-derives the owning submission's status in one transaction.
+3. `POST /admin/photos/{id}/{approve|reject|flag|hide|remove|restore}` transitions the photograph. Every transition writes a `photo_moderations` row, an audit row, and re-derives the owning submission's status in one transaction. Approval additionally accepts `albumId`, an optional `eventId`, and optional `title`, `caption`, and `altText`, so a moderator can correct the filing and display details in the same decision. The album must belong to the submitted `eventId`; the event may differ from the photograph's current event, which moves the photograph between archive sections. `PATCH /admin/photos/{id}` applies the same filing and detail edits without changing moderation status.
 4. `GET /admin/photos/{id}/moderation-history` returns the append-only history.
 5. Approved photographs become publicly readable only when their album and event are also published and not deleted.
 
@@ -252,7 +254,7 @@ Allowed transitions:
 
 | Action | From | To | Extra input |
 |---|---|---|---|
-| `approve` | `PENDING`, `FLAGGED` | `APPROVED` | `albumId` when the photograph has none; must belong to the same event |
+| `approve` | `PENDING`, `FLAGGED` | `APPROVED` | `albumId` (required when the photograph has none) plus optional `eventId`, `title`, `caption`, `altText` |
 | `reject` | `PENDING`, `FLAGGED` | `REJECTED` | `reason` |
 | `flag` | `PENDING`, `APPROVED` | `FLAGGED` | `reason` |
 | `hide` | `APPROVED`, `FLAGGED`, `REJECTED` | `HIDDEN` | `reason` |
@@ -319,6 +321,7 @@ Album titles must be unique within one event and may repeat across events; the t
 | `GET` | `/api/v1/admin/moderation/photos` | Implemented | Moderation queue, optionally filtered by `status` |
 | `GET` | `/api/v1/admin/photos/{id}/moderation-history` | Implemented | Append-only transition history |
 | `POST` | `/api/v1/admin/photos/{id}/approve` | Implemented | Approve, assigning an album when absent |
+| `PATCH` | `/api/v1/admin/photos/{id}` | Implemented | Re-file or retitle a photograph without changing its status |
 | `POST` | `/api/v1/admin/photos/{id}/reject` | Implemented | Reject with reason |
 | `POST` | `/api/v1/admin/photos/{id}/flag` | Implemented | Flag with reason |
 | `POST` | `/api/v1/admin/photos/{id}/hide` | Implemented | Hide with reason |

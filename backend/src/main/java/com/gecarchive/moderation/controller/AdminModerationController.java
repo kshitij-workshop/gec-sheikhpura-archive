@@ -13,6 +13,7 @@ import com.gecarchive.moderation.dto.RemovalRequestResolutionRequest;
 import com.gecarchive.moderation.dto.RemovalRequestResponse;
 import com.gecarchive.moderation.dto.ReportResolutionRequest;
 import com.gecarchive.moderation.dto.ReportResponse;
+import com.gecarchive.moderation.dto.UpdatePhotoRequest;
 import com.gecarchive.moderation.entity.ModerationAction;
 import com.gecarchive.moderation.entity.RemovalRequestStatus;
 import com.gecarchive.moderation.entity.ReportStatus;
@@ -63,6 +64,13 @@ public class AdminModerationController {
     @GetMapping("/photos/{id}/moderation-history")
     public List<ModerationHistoryEntryResponse> history(@PathVariable UUID id) {
         return moderation.history(id);
+    }
+
+    @PatchMapping("/photos/{id}")
+    public ModerationPhotoResponse updatePhoto(@PathVariable UUID id,
+            @Valid @RequestBody UpdatePhotoRequest request,
+            @AuthenticationPrincipal AuthenticatedUser actor, HttpServletRequest httpRequest) {
+        return moderation.updateDetails(id, request, actor, ClientInfo.from(httpRequest));
     }
 
     @PostMapping("/photos/{id}/approve")

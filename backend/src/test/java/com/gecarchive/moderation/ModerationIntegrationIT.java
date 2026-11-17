@@ -166,6 +166,151 @@ class ModerationIntegrationIT extends AbstractAuthIntegrationTest {
     }
 
     @Test
+    void approvalCanAlsoRetitleAndMoveAPhotographToAnotherEventAlbum() throws Exception {
+        User admin = account(Role.ADMIN);
+        User uploader = account(Role.USER);
+        Event sourceEvent = event(admin);
+        Album sourceAlbum = album(sourceEvent, admin);
+        Event targetEvent = event(admin);
+        Album targetAlbum = album(targetEvent, admin);
+        String adminAuth = auth(admin);
+
+        Submitted submitted = submitPhoto(auth(uploader), sourceEvent.getId(), sourceAlbum.getId());
+        mockMvc.perform(post("/api/v1/admin/photos/" + submitted.photoId() + "/approve")
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth)
+                        .contentType(JSON)
+                        .content("""
+                                {"albumId":"%s","eventId":"%s","title":"Corrected title",
+                                 "caption":"Corrected caption","altText":"Corrected alt text"}
+                                """.formatted(targetAlbum.getId(), targetEvent.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.eventId").value(targetEvent.getId().toString()))
+                .andExpect(jsonPath("$.albumId").value(targetAlbum.getId().toString()))
+                .andExpect(jsonPath("$.title").value("Corrected title"))
+                .andExpect(jsonPath("$.caption").value("Corrected caption"))
+                .andExpect(jsonPath("$.altText").value("Corrected alt text"));
+
+        var photo = photos.findById(UUID.fromString(submitted.photoId())).orElseThrow();
+        assertThat(photo.getEvent().getId()).isEqualTo(targetEvent.getId());
+        assertThat(photo.getAlbum().getId()).isEqualTo(targetAlbum.getId());
+        assertThat(photo.getTitle()).isEqualTo("Corrected title");
+    }
+
+    @Test
+    void adminCanEditAnApprovedPhotographWithoutChangingItsStatus() throws Exception {
+        User admin = account(Role.ADMIN);
+        User uploader = account(Role.USER);
+        Event firstEvent = event(admin);
+        Album firstAlbum = album(firstEvent, admin);
+        Event secondEvent = event(admin);
+        Album secondAlbum = album(secondEvent, admin);
+        String adminAuth = auth(admin);
+
+        Submitted submitted = submitPhoto(auth(uploader), firstEvent.getId(), firstAlbum.getId());
+        mockMvc.perform(post("/api/v1/admin/photos/" + submitted.photoId() + "/approve")
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth)
+                        .contentType(JSON)
+                        .content("{\"albumId\":\"" + firstAlbum.getId() + "\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(patch("/api/v1/admin/photos/" + submitted.photoId())
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth)
+                        .contentType(JSON)
+                        .content("""
+                                {"albumId":"%s","eventId":"%s","title":"Refiled title",
+                                 "caption":null,"altText":null}
+                                """.formatted(secondAlbum.getId(), secondEvent.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.eventId").value(secondEvent.getId().toString()))
+                .andExpect(jsonPath("$.albumId").value(secondAlbum.getId().toString()))
+                .andExpect(jsonPath("$.title").value("Refiled title"));
+
+        mockMvc.perform(get("/api/v1/admin/audit-logs?entityType=PHOTO")
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[?(@.action == 'PHOTO_DETAILS_UPDATED')]").isNotEmpty());
+    }
+
+    @Test
+    void editingRejectsAnAlbumFromAConflictingEvent() throws Exception {
+        User admin = account(Role.ADMIN);
+        User uploader = account(Role.USER);
+        Event event = event(admin);
+        Album album = album(event, admin);
+        Event otherEvent = event(admin);
+        Album otherAlbum = album(otherEvent, admin);
+        String adminAuth = auth(admin);
+
+        Submitted submitted = submitPhoto(auth(uploader), event.getId(), album.getId());
+
+        mockMvc.perform(patch("/api/v1/admin/photos/" + submitted.photoId())
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth)
+                        .contentType(JSON)
+                        .content("""
+                                {"albumId":"%s","eventId":"%s","title":"Mismatch"}
+                                """.formatted(otherAlbum.getId(), event.getId())))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void editingRequiresAnAlbumAndAnAdministrator() throws Exception {
+        User admin = account(Role.ADMIN);
+        User uploader = account(Role.USER);
+        Event event = event(admin);
+        Album album = album(event, admin);
+        String uploaderAuth = auth(uploader);
+
+        Submitted submitted = submitPhoto(uploaderAuth, event.getId(), album.getId());
+
+        mockMvc.perform(patch("/api/v1/admin/photos/" + submitted.photoId())
+                        .header(HttpHeaders.AUTHORIZATION, auth(admin))
+                        .contentType(JSON)
+                        .content("{\"title\":\"Missing album\"}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(patch("/api/v1/admin/photos/" + submitted.photoId())
+                        .header(HttpHeaders.AUTHORIZATION, uploaderAuth)
+                        .contentType(JSON)
+                        .content("{\"albumId\":\"" + album.getId() + "\",\"title\":\"Self edit\"}"))
+                .andExpect(status().isForbidden());
+
+        var photo = photos.findById(UUID.fromString(submitted.photoId())).orElseThrow();
+        assertThat(photo.getTitle()).isEqualTo("Campus");
+    }
+
+    @Test
+    void publicPhotoMarksRemovalEligibilityOnlyForItsUploader() throws Exception {
+        User admin = account(Role.ADMIN);
+        User uploader = account(Role.USER);
+        User other = account(Role.USER);
+        Event event = event(admin);
+        Album album = album(event, admin);
+        String uploaderAuth = auth(uploader);
+
+        Submitted submitted = submitPhoto(uploaderAuth, event.getId(), album.getId());
+        mockMvc.perform(post("/api/v1/admin/photos/" + submitted.photoId() + "/approve")
+                        .header(HttpHeaders.AUTHORIZATION, auth(admin))
+                        .contentType(JSON)
+                        .content("{\"albumId\":\"" + album.getId() + "\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/photos/" + submitted.photoId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.viewerCanRequestRemoval").value(false));
+
+        mockMvc.perform(get("/api/v1/photos/" + submitted.photoId())
+                        .header(HttpHeaders.AUTHORIZATION, uploaderAuth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.viewerCanRequestRemoval").value(true));
+
+        mockMvc.perform(get("/api/v1/photos/" + submitted.photoId())
+                        .header(HttpHeaders.AUTHORIZATION, auth(other)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.viewerCanRequestRemoval").value(false));
+    }
+
+    @Test
     void moderationQueueCarriesContextAndAnAdminOnlyPreviewIdentifier() throws Exception {
         User admin = account(Role.ADMIN);
         User uploader = account(Role.USER);

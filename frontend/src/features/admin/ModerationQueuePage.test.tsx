@@ -5,12 +5,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   getModerationHistory,
   listAdminAlbums,
+  listAdminEvents,
   listModerationQueue,
   moderatePhoto,
+  updatePhoto,
 } from '../../lib/api/adminApi'
 import { pageOf } from '../../test/fetchStub'
 import {
   makeAdminAlbum,
+  makeEvent,
   makeModerationHistoryEntry,
   makeModerationPhoto,
 } from '../../test/archiveFixtures'
@@ -21,6 +24,8 @@ vi.mock('../../lib/api/adminApi', () => ({
   getModerationHistory: vi.fn(),
   moderatePhoto: vi.fn(),
   listAdminAlbums: vi.fn(),
+  listAdminEvents: vi.fn(),
+  updatePhoto: vi.fn(),
 }))
 
 beforeEach(() => {
@@ -28,6 +33,7 @@ beforeEach(() => {
   vi.mocked(listModerationQueue).mockResolvedValue(pageOf())
   vi.mocked(getModerationHistory).mockResolvedValue([])
   vi.mocked(listAdminAlbums).mockResolvedValue([])
+  vi.mocked(listAdminEvents).mockResolvedValue(pageOf([makeEvent()]))
 })
 
 describe('moderation queue', () => {
@@ -121,7 +127,6 @@ describe('moderation queue', () => {
     await waitFor(() => {
       expect(moderatePhoto).toHaveBeenCalledWith(photo.id, 'reject', {
         reason: 'The image duplicates another approved photograph.',
-        albumId: null,
       })
     })
     expect(
@@ -172,8 +177,11 @@ describe('moderation queue', () => {
 
     await waitFor(() => {
       expect(moderatePhoto).toHaveBeenCalledWith(photo.id, 'approve', {
-        reason: null,
         albumId: album.id,
+        eventId: photo.eventId,
+        title: photo.title,
+        caption: photo.caption,
+        altText: photo.altText,
       })
     })
     expect(
@@ -206,5 +214,84 @@ describe('moderation queue', () => {
       screen.getByText('Not recorded → Pending review'),
     ).toBeInTheDocument()
     expect(getModerationHistory).toHaveBeenCalledWith(photo.id)
+  })
+
+  it('lets a moderator correct the title and album while approving', async () => {
+    const user = userEvent.setup()
+    const photo = makeModerationPhoto()
+    const album = makeAdminAlbum({ id: 'c3333333-3333-4333-8333-333333333333', title: 'Corrections' })
+    vi.mocked(listModerationQueue).mockResolvedValue(pageOf([photo]))
+    vi.mocked(listAdminAlbums).mockResolvedValue([album])
+    vi.mocked(moderatePhoto).mockResolvedValue(
+      makeModerationPhoto({ status: 'APPROVED', albumId: album.id, albumTitle: album.title }),
+    )
+
+    renderApp({ path: '/admin/moderation', auth: authForRole('ADMIN') })
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Approve: Opening ceremony' }),
+    )
+
+    const title = screen.getByLabelText('Title')
+    await user.clear(title)
+    await user.type(title, 'Corrected ceremony title')
+    await user.selectOptions(screen.getByLabelText('Album'), album.id)
+    await user.click(screen.getByRole('button', { name: 'Approve' }))
+
+    await waitFor(() => {
+      expect(moderatePhoto).toHaveBeenCalledWith(photo.id, 'approve', {
+        albumId: album.id,
+        eventId: photo.eventId,
+        title: 'Corrected ceremony title',
+        caption: photo.caption,
+        altText: photo.altText,
+      })
+    })
+    expect(
+      await screen.findByText(
+        '“Opening ceremony” was approved and filed under Corrections.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('edits an approved photograph without changing its status', async () => {
+    const user = userEvent.setup()
+    const photo = makeModerationPhoto({ status: 'APPROVED' })
+    const album = makeAdminAlbum()
+    vi.mocked(listModerationQueue).mockResolvedValue(pageOf([photo]))
+    vi.mocked(listAdminAlbums).mockResolvedValue([album])
+    vi.mocked(updatePhoto).mockResolvedValue(
+      makeModerationPhoto({ status: 'APPROVED', title: 'Refiled title' }),
+    )
+
+    renderApp({ path: '/admin/moderation?status=APPROVED', auth: authForRole('ADMIN') })
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Edit details: Opening ceremony',
+      }),
+    )
+
+    expect(
+      screen.getByRole('heading', { name: 'Edit photograph details' }),
+    ).toBeInTheDocument()
+
+    const title = screen.getByLabelText('Title')
+    await user.clear(title)
+    await user.type(title, 'Refiled title')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => {
+      expect(updatePhoto).toHaveBeenCalledWith(photo.id, {
+        albumId: album.id,
+        eventId: photo.eventId,
+        title: 'Refiled title',
+        caption: photo.caption,
+        altText: photo.altText,
+      })
+    })
+    expect(
+      await screen.findByText('“Opening ceremony” was updated.'),
+    ).toBeInTheDocument()
   })
 })

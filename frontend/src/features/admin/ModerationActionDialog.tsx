@@ -2,18 +2,15 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import {
-  Alert,
-  Button,
-  Dialog,
-  SelectField,
-  Skeleton,
-  TextAreaField,
-} from '../../components/ui'
+import { Alert, Button, Dialog, TextAreaField } from '../../components/ui'
 import { moderatePhoto } from '../../lib/api/adminApi'
+import type { ModerationInput } from '../../lib/api/adminApi'
 import type { ModerationAction, ModerationPhoto } from '../../lib/api/types'
 import { requestFailureMessage } from '../../lib/api/errorMessage'
 import { moderationActions } from './moderationActions'
+import { PhotoFilingFields } from './PhotoFilingFields'
+import { initialFilingDraft } from './photoFiling'
+import type { PhotoFilingDraft } from './photoFiling'
 import { adminKeys, useEventAlbums } from './queries'
 
 function photoLabel(photo: ModerationPhoto): string {
@@ -31,8 +28,9 @@ export interface ModerationActionDialogProps {
  * Confirmation step for one moderation transition.
  *
  * The server re-validates the transition and the reason rules; this dialog
- * mirrors them so a moderator sees the requirement before submitting. Approval
- * only asks for an album when the photograph does not already belong to one.
+ * mirrors them so a moderator sees the requirement before submitting.
+ * Approval also invites a filing correction: the event, album, title, caption
+ * and alternative text can all change in the same decision.
  */
 export function ModerationActionDialog({
   photo,
@@ -42,27 +40,31 @@ export function ModerationActionDialog({
 }: ModerationActionDialogProps) {
   const config = moderationActions[action]
   const queryClient = useQueryClient()
-  const needsAlbum = action === 'approve' && photo.albumId === null
-  const albums = useEventAlbums(needsAlbum ? photo.eventId : null)
+  const approving = action === 'approve'
 
   const [reason, setReason] = useState('')
   const [reasonError, setReasonError] = useState<string | undefined>(undefined)
-  const [albumId, setAlbumId] = useState('')
+  const [filing, setFiling] = useState<PhotoFilingDraft>(() =>
+    initialFilingDraft(photo),
+  )
   const [albumError, setAlbumError] = useState<string | undefined>(undefined)
 
+  const albums = useEventAlbums(
+    approving && filing.eventId.length > 0 ? filing.eventId : null,
+  )
+
   const mutation = useMutation({
-    mutationFn: (input: { reason: string | null; albumId: string | null }) =>
+    mutationFn: (input: ModerationInput) =>
       moderatePhoto(photo.id, action, input),
     onSuccess: () => {
       const albumTitle = albums.data?.find(
-        (album) => album.id === albumId,
+        (album) => album.id === filing.albumId,
       )?.title
-      const message =
-        action === 'approve'
-          ? albumTitle
-            ? `“${photoLabel(photo)}” was approved and filed under ${albumTitle}.`
-            : `“${photoLabel(photo)}” was approved.`
-          : `“${photoLabel(photo)}” was ${config.past}.`
+      const message = approving
+        ? albumTitle && albumTitle !== photo.albumTitle
+          ? `“${photoLabel(photo)}” was approved and filed under ${albumTitle}.`
+          : `“${photoLabel(photo)}” was approved.`
+        : `“${photoLabel(photo)}” was ${config.past}.`
 
       void Promise.all([
         queryClient.invalidateQueries({
@@ -70,6 +72,9 @@ export function ModerationActionDialog({
         }),
         queryClient.invalidateQueries({
           queryKey: adminKeys.moderationHistory(photo.id),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: adminKeys.eventAlbums(filing.eventId),
         }),
       ])
       onModerated(message)
@@ -80,33 +85,43 @@ export function ModerationActionDialog({
     event.preventDefault()
 
     const trimmed = reason.trim()
-    if (config.reasonRequired && trimmed.length === 0) {
-      setReasonError('Explain briefly why this action is needed.')
-      return
+    if (!approving) {
+      if (config.reasonRequired && trimmed.length === 0) {
+        setReasonError('Explain briefly why this action is needed.')
+        return
+      }
+      if (trimmed.length > 1000) {
+        setReasonError('Use 1000 characters or fewer.')
+        return
+      }
     }
-    if (trimmed.length > 1000) {
-      setReasonError('Use 1000 characters or fewer.')
-      return
-    }
-    if (needsAlbum && albumId.length === 0) {
-      setAlbumError('Choose the album that should hold this photograph.')
-      return
+
+    if (approving) {
+      if (filing.eventId.length === 0) {
+        setAlbumError('Choose the event that should hold this photograph.')
+        return
+      }
+      if (filing.albumId.length === 0) {
+        setAlbumError('Choose the album that should hold this photograph.')
+        return
+      }
     }
 
     setReasonError(undefined)
     setAlbumError(undefined)
-    mutation.mutate({
-      reason: config.reasonRequired ? trimmed : null,
-      // Preserve an existing album ID when approval does not need a new
-      // assignment. Sending null here would make the backend treat the photo
-      // as album-less even when the queue read model already carries one.
-      albumId:
-        action === 'approve' ? (needsAlbum ? albumId : photo.albumId) : null,
-    })
-  }
 
-  const noAlbumsAvailable =
-    needsAlbum && albums.isSuccess && albums.data.length === 0
+    mutation.mutate(
+      approving
+        ? {
+            albumId: filing.albumId,
+            eventId: filing.eventId,
+            title: filing.title,
+            caption: filing.caption,
+            altText: filing.altText,
+          }
+        : { reason: config.reasonRequired ? trimmed : null },
+    )
+  }
 
   return (
     <Dialog
@@ -129,7 +144,6 @@ export function ModerationActionDialog({
             form={`moderation-form-${photo.id}`}
             variant={config.variant}
             isLoading={mutation.isPending}
-            disabled={noAlbumsAvailable}
           >
             {config.confirm}
           </Button>
@@ -153,41 +167,21 @@ export function ModerationActionDialog({
           </Alert>
         ) : null}
 
-        {needsAlbum ? (
-          <>
-            {albums.isPending ? (
-              <Skeleton className="h-16 w-full" />
-            ) : albums.isError ? (
-              <Alert tone="danger" title="Albums could not be loaded">
-                Approval needs an album. Refresh the page and try again.
-              </Alert>
-            ) : noAlbumsAvailable ? (
-              <Alert tone="warning" title="This event has no albums">
-                Create an album for {photo.eventTitle} before approving this
-                photograph.
-              </Alert>
-            ) : (
-              <SelectField
-                id={`moderation-album-${photo.id}`}
-                label="Album"
-                hint="Unpublished albums keep the photograph out of the public archive until the album is published."
-                value={albumId}
-                error={albumError}
-                onChange={(event) => {
-                  setAlbumId(event.target.value)
-                  setAlbumError(undefined)
-                }}
-              >
-                <option value="">Choose an album</option>
-                {albums.data.map((album) => (
-                  <option key={album.id} value={album.id}>
-                    {album.title}
-                    {album.published ? '' : ' (unpublished)'}
-                  </option>
-                ))}
-              </SelectField>
-            )}
-          </>
+        {approving ? (
+          <PhotoFilingFields
+            idPrefix={`moderation-${photo.id}`}
+            draft={filing}
+            albumError={albumError}
+            disabled={mutation.isPending}
+            currentEventTitle={photo.eventTitle}
+            currentAlbumTitle={photo.albumTitle}
+            onChange={(patch) => {
+              setFiling((current) => ({ ...current, ...patch }))
+              if (patch.albumId !== undefined) {
+                setAlbumError(undefined)
+              }
+            }}
+          />
         ) : null}
 
         {config.reasonRequired ? (

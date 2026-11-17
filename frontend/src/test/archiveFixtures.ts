@@ -82,6 +82,7 @@ export function makePhoto(overrides: Partial<PublicPhoto> = {}): PublicPhoto {
     takenAt: '2026-02-14T09:30:00Z',
     sortOrder: 0,
     photographers: [{ creditName: 'Asha Verma', creditOrder: 0 }],
+    viewerCanRequestRemoval: false,
     ...overrides,
   }
 }

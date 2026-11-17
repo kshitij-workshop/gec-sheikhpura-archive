@@ -7,7 +7,7 @@ import {
   makePhoto,
 } from '../../test/archiveFixtures'
 import { jsonResponse, pageOf, requestPath } from '../../test/fetchStub'
-import { renderApp } from '../../test/renderApp'
+import { authForRole, renderApp } from '../../test/renderApp'
 
 beforeEach(() => {
   vi.stubEnv('VITE_CLOUDINARY_CLOUD_NAME', 'gecs-demo')
@@ -121,6 +121,38 @@ describe('AlbumPage', () => {
     fireEvent.keyDown(dialog!, { key: 'Escape' })
 
     expect(screen.queryByText('2 of 2')).not.toBeInTheDocument()
+  })
+
+  it('keeps the viewer open when a nested report dialog is dismissed', async () => {
+    const user = userEvent.setup()
+    stubAlbum()
+
+    renderApp({
+      path: '/albums/annual-sports-day',
+      auth: authForRole('USER'),
+    })
+
+    await user.click(
+      await screen.findByRole('button', { name: 'View Opening ceremony' }),
+    )
+    const viewer = screen.getByText('1 of 2').closest('dialog')
+    expect(viewer).not.toBeNull()
+
+    await user.click(within(viewer!).getByRole('button', { name: /report/i }))
+
+    const heading = screen.getByRole('heading', {
+      name: 'Report this photograph',
+    })
+    const reportDialog = heading.closest('dialog')
+    expect(reportDialog).toHaveAttribute('open')
+
+    fireEvent.keyDown(heading, { key: 'Escape' })
+
+    expect(
+      screen.queryByRole('heading', { name: 'Report this photograph' }),
+    ).not.toBeInTheDocument()
+    expect(viewer).toHaveAttribute('open')
+    expect(within(viewer!).getByText('1 of 2')).toBeInTheDocument()
   })
 
   it('shows a clear not-found state for an unavailable album', async () => {

@@ -136,9 +136,14 @@ Photo states:
 
 Only `ADMIN` and `SUPER_ADMIN` may moderate. Every action records the actor, timestamp, reason where applicable, and prior/new state.
 
+While approving a photograph, an administrator may also correct its filing and display details: the event, the album, the title, the caption, and the alternative text. The same correction is available after approval without changing the moderation status. The album always decides the photograph's event, so a correction that moves a photograph between events also moves it between public archive sections.
+
 ### 7.4 Reports and removal
 
-- Users can report inappropriate or unauthorized photographs.
+- Users can report inappropriate or unauthorized photographs with a category and optional details.
+- Every published photograph offers the report action to signed-in users.
+- The uploader can request removal of their own published photograph from the public archive.
+- Removal requests are reviewed by administrators; a request does not remove the photograph immediately.
 - Administrators can resolve or dismiss reports.
 - Content removal and privacy complaints must have a documented process.
 - Removed content must not be publicly reachable.
