@@ -351,9 +351,28 @@ export interface AdminAlbum {
   eventSlug: string
 }
 
+/** Identifying context attached to an administrative governance record. */
+export interface AdminPhotoSummary {
+  id: string
+  title: string | null
+  format: string
+  cloudinaryPublicId: string
+  widthPx: number
+  heightPx: number
+  status: PhotoStatus
+  eventId: string
+  eventTitle: string
+  albumId: string | null
+  albumTitle: string | null
+  uploadedByUserId: string
+  uploaderDisplayName: string
+  createdAt: string
+}
+
 export interface AdminReport {
   id: string
   photoId: string
+  photo: AdminPhotoSummary
   reportedByUserId: string
   category: string
   details: string
@@ -367,6 +386,7 @@ export interface AdminReport {
 export interface AdminRemovalRequest {
   id: string
   photoId: string
+  photo: AdminPhotoSummary
   requestedByUserId: string
   reason: string
   status: 'PENDING' | 'APPROVED' | 'REJECTED'

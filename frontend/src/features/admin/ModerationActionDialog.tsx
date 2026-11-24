@@ -76,6 +76,7 @@ export function ModerationActionDialog({
         queryClient.invalidateQueries({
           queryKey: adminKeys.eventAlbums(filing.eventId),
         }),
+        queryClient.invalidateQueries({ queryKey: ['archive'] }),
       ])
       onModerated(message)
     },

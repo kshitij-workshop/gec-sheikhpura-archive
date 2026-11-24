@@ -1,6 +1,9 @@
 import type {
   AcademicYear,
   AdminAlbum,
+  AdminPhotoSummary,
+  AdminRemovalRequest,
+  AdminReport,
   AlbumDetail,
   AlbumSummary,
   ArchiveEvent,
@@ -309,6 +312,65 @@ export function makeAdminAlbum(
     eventId: makeEvent().id,
     eventTitle: makeEvent().title,
     eventSlug: makeEvent().slug,
+    ...overrides,
+  }
+}
+
+export function makeAdminPhotoSummary(
+  overrides: Partial<AdminPhotoSummary> = {},
+): AdminPhotoSummary {
+  return {
+    id: makeModerationPhoto().id,
+    title: makeModerationPhoto().title,
+    format: makeModerationPhoto().format,
+    cloudinaryPublicId: makeModerationPhoto().cloudinaryPublicId,
+    widthPx: makeModerationPhoto().widthPx,
+    heightPx: makeModerationPhoto().heightPx,
+    status: 'APPROVED',
+    eventId: makeEvent().id,
+    eventTitle: makeEvent().title,
+    albumId: makeAlbumSummary().id,
+    albumTitle: makeAlbumSummary().title,
+    uploadedByUserId: makeModerationPhoto().uploadedByUserId,
+    uploaderDisplayName: makeModerationPhoto().uploaderDisplayName,
+    createdAt: makeModerationPhoto().createdAt,
+    ...overrides,
+  }
+}
+
+export function makeAdminReport(
+  overrides: Partial<AdminReport> = {},
+): AdminReport {
+  return {
+    id: 'c1111111-1111-4111-8111-111111111111',
+    photoId: makeAdminPhotoSummary().id,
+    photo: makeAdminPhotoSummary(),
+    reportedByUserId: '3f1c2b4a-0000-4000-8000-000000000001',
+    category: 'PRIVACY',
+    details: 'A student is identifiable without consent.',
+    status: 'PENDING',
+    resolutionNote: null,
+    handledByUserId: null,
+    handledAt: null,
+    createdAt: '2026-02-16T09:00:00Z',
+    ...overrides,
+  }
+}
+
+export function makeAdminRemovalRequest(
+  overrides: Partial<AdminRemovalRequest> = {},
+): AdminRemovalRequest {
+  return {
+    id: 'c2222222-2222-4222-8222-222222222222',
+    photoId: makeAdminPhotoSummary().id,
+    photo: makeAdminPhotoSummary(),
+    requestedByUserId: '3f1c2b4a-0000-4000-8000-000000000001',
+    reason: 'The subject asked for the photograph to be taken down.',
+    status: 'PENDING',
+    resolutionNote: null,
+    handledByUserId: null,
+    handledAt: null,
+    createdAt: '2026-02-17T09:00:00Z',
     ...overrides,
   }
 }

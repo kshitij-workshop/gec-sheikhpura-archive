@@ -14,6 +14,7 @@ export const adminKeys = {
     ['admin', 'moderation', status, page, size] as const,
   moderationHistory: (photoId: string) =>
     ['admin', 'moderation-history', photoId] as const,
+  photo: (photoId: string) => ['admin', 'photo', photoId] as const,
   eventAlbums: (eventId: string) => ['admin', 'albums', eventId] as const,
   eventOptions: ['admin', 'event-options'] as const,
 }

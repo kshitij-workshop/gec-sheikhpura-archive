@@ -5,6 +5,7 @@ import type { PublicPhoto } from '../../../lib/api/types'
 import { formatCredits, formatTimestamp } from '../../../lib/format'
 import { PhotoActions } from './PhotoActions'
 import { PhotoImage } from './PhotoImage'
+import { AdminPhotoMenu } from '../../admin/AdminPhotoMenu'
 
 export interface PhotoViewerProps {
   photos: PublicPhoto[]
@@ -157,6 +158,12 @@ export function PhotoViewer({
             </p>
 
             <PhotoActions key={photo.id} photo={photo} className="pt-1" />
+
+            <AdminPhotoMenu
+              photoId={photo.id}
+              photoTitle={photo.title}
+              className="pt-1"
+            />
 
             <div className="flex items-center justify-between gap-2 pt-1">
               <Button

@@ -18,14 +18,40 @@ const query = (values: Record<string, string | number | undefined>) => {
   return result ? `?${result}` : ''
 }
 
-export function listReports(status?: string, page = 0, size = 10) {
-  return apiRequest<PageResponse<AdminReport>>(`/admin/reports${query({ status, page, size })}`)
+export function listReports(input: {
+  status?: string
+  category?: string
+  eventId?: string
+  page?: number
+  size?: number
+} = {}) {
+  return apiRequest<PageResponse<AdminReport>>(
+    `/admin/reports${query({
+      status: input.status,
+      category: input.category,
+      eventId: input.eventId,
+      page: input.page ?? 0,
+      size: input.size ?? 10,
+    })}`,
+  )
 }
 export function resolveReport(id: string, input: { status: string; resolutionNote: string }) {
   return apiRequest<AdminReport>(`/admin/reports/${encodeURIComponent(id)}`, { method: 'PATCH', body: input })
 }
-export function listRemovalRequests(status?: string, page = 0, size = 10) {
-  return apiRequest<PageResponse<AdminRemovalRequest>>(`/admin/removal-requests${query({ status, page, size })}`)
+export function listRemovalRequests(input: {
+  status?: string
+  eventId?: string
+  page?: number
+  size?: number
+} = {}) {
+  return apiRequest<PageResponse<AdminRemovalRequest>>(
+    `/admin/removal-requests${query({
+      status: input.status,
+      eventId: input.eventId,
+      page: input.page ?? 0,
+      size: input.size ?? 10,
+    })}`,
+  )
 }
 export function resolveRemovalRequest(id: string, input: { status: string; resolutionNote: string }) {
   return apiRequest<AdminRemovalRequest>(`/admin/removal-requests/${encodeURIComponent(id)}`, { method: 'PATCH', body: input })

@@ -12,6 +12,7 @@ import {
 import { EventCard } from '../archive/components/EventCard'
 import { PhotoActions } from '../archive/components/PhotoActions'
 import { PhotoImage } from '../archive/components/PhotoImage'
+import { AdminPhotoMenu } from '../admin/AdminPhotoMenu'
 import { useAcademicYears, useEvents, useRecentPhotos } from '../archive/queries'
 
 const values = [
@@ -161,11 +162,15 @@ export default function HomePage() {
                       </figcaption>
                     </figure>
                   </Link>
-                  <PhotoActions
-                    photo={photo}
-                    compact
-                    className="mt-auto px-1 pb-1 pt-2"
-                  />
+                  <div className="mt-auto px-1 pb-1 pt-2">
+                    <PhotoActions photo={photo} compact />
+                    <AdminPhotoMenu
+                      photoId={photo.id}
+                      photoTitle={photo.title}
+                      compact
+                      className="pt-1"
+                    />
+                  </div>
                 </div>
               </li>
             ))}

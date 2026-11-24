@@ -86,6 +86,13 @@ export function getModerationHistory(
   )
 }
 
+/** One photograph as moderators see it, for public-page admin controls. */
+export function getAdminPhoto(photoId: string): Promise<ModerationPhoto> {
+  return apiRequest<ModerationPhoto>(
+    `/admin/photos/${encodeURIComponent(photoId)}`,
+  )
+}
+
 export function moderatePhoto(
   photoId: string,
   action: ModerationAction,

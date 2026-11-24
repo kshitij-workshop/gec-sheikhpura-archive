@@ -16,6 +16,7 @@ import { Breadcrumbs } from './components/Breadcrumbs'
 import { PhotoImage } from './components/PhotoImage'
 import { PhotoActions } from './components/PhotoActions'
 import { PhotoViewer } from './components/PhotoViewer'
+import { AdminPhotoMenu } from '../admin/AdminPhotoMenu'
 import { useAlbum } from './queries'
 
 function pageFromParam(value: string | null): number {
@@ -181,6 +182,12 @@ export default function AlbumPage() {
                       photo={photo}
                       compact
                       className="px-1 pb-1 pt-2"
+                    />
+                    <AdminPhotoMenu
+                      photoId={photo.id}
+                      photoTitle={photo.title}
+                      compact
+                      className="px-1 pb-1"
                     />
                   </figure>
                 </li>

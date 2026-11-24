@@ -186,6 +186,8 @@ Phase 09 adds the complete administration workspace.
 - Every other action requires a reason. Reasons and filing choices are validated in the dialog, then recorded by the API in moderation history and the audit log.
 - Moderation history loads on demand per photograph, not for every card, and shows the actor, role, transition, reason, and date.
 - A successful action closes the dialog, clears stale queue/history queries, and shows a confirmation notice. Nothing is removed from the DOM as if it had succeeded before the server responded.
+- The governance queues render the photograph itself, not just an identifier: each report or removal request shows the image preview, title, event and album, uploader, format, dimensions, upload date, and the current photograph status. Reports can be filtered by status, category, and event; removal requests by status and event. Both filters combine and are kept in the URL.
+- Administrators also get a role-gated "Manage" control on home-page cards, album tiles, the public photo viewer, and governance queue cards. It loads `GET /admin/photos/{id}` on demand, offers only transitions the current status accepts (flag, hide, remove, restore), and exposes the same Edit details dialog as the moderation queue. Every action refreshes the archive queries so a hidden or removed photograph disappears immediately, and every request is authorized again by the API.
 
 ## 7. Session and API client
 
@@ -239,7 +241,8 @@ Vitest with jsdom and React Testing Library covers:
 - Account lifecycle: registration policy and generic success, explicit email verification, expired-token handling and resend, forgot-password non-enumeration, reset completion, forced password change with session clearing, and the sign-in notice.
 - Member dashboard: summary counts and recent activity, own upload metadata and photographer credits, removal requests with reasons, submission tracking, suggestion creation and validation, and profile updates through `setUser`.
 - Administration: guarded admin routes and index redirect, pending queue reads with archive context, URL-driven status filters, empty and error states, reason-required rejection, event/album/detail correction during approval and afterwards, and lazy moderation history.
-- Governance: report, removal-request, and event-suggestion queues with status filters and recorded resolutions.
+- Governance: report, removal-request, and event-suggestion queues with photo previews and context, status/category/event filters, and recorded resolutions.
+- Public-page administration: role-gated manage control on archive photographs for editing details, flagging, hiding, removing, and restoring.
 - Archive management: create academic years, categories, draft events, and draft albums; publish or unpublish events.
 - People and oversight: searchable user directory, status changes, super-admin-only role changes, operational analytics, and paginated audit activity.
 - Contribution flow: event selection, file queue, required photographer credits, submission creation, signed Cloudinary upload, photo registration, and per-item retry after a failed upload.
