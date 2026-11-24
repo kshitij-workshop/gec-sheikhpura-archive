@@ -135,6 +135,17 @@ public class PhotoModerationService {
     }
 
     /**
+     * Loads one photograph with everything an administrator needs to edit or
+     * moderate it from a public archive page.
+     */
+    @Transactional(readOnly = true)
+    public ModerationPhotoResponse details(UUID photoId) {
+        Photo photo = photo(photoId);
+        return ModerationPhotoResponse.from(photo,
+                photographers.findByPhoto_IdOrderByCreditOrderAsc(photo.getId()));
+    }
+
+    /**
      * Writes the opening SUBMIT row when a photograph is registered so every
      * moderation history starts with the uploader's original contribution.
      */

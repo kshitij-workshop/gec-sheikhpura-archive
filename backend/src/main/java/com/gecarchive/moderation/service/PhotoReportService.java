@@ -1,6 +1,8 @@
 package com.gecarchive.moderation.service;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -16,6 +18,7 @@ import com.gecarchive.moderation.dto.ReportRequest;
 import com.gecarchive.moderation.dto.ReportResolutionRequest;
 import com.gecarchive.moderation.dto.ReportResponse;
 import com.gecarchive.moderation.entity.PhotoReport;
+import com.gecarchive.moderation.entity.ReportCategory;
 import com.gecarchive.moderation.entity.ReportStatus;
 import com.gecarchive.moderation.repository.PhotoReportRepository;
 import com.gecarchive.photo.entity.Photo;
@@ -23,9 +26,12 @@ import com.gecarchive.photo.repository.PhotoRepository;
 import com.gecarchive.user.entity.User;
 import com.gecarchive.user.repository.UserRepository;
 
+import jakarta.persistence.criteria.Predicate;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,16 +80,32 @@ public class PhotoReportService {
 
         audit.record(reporter, "PHOTO_REPORTED", "PHOTO", photoId, null,
                 Map.of("reportId", report.getId().toString(), "category", request.category().name()), client);
-        return ReportResponse.from(report);
+        return ReportResponse.created(report);
     }
 
+    /**
+     * Lists reports with the optional filters an administrator uses to triage
+     * the queue. Filters combine with AND and are all applied in the database.
+     */
     @Transactional(readOnly = true)
-    public PageResponse<ReportResponse> list(ReportStatus status, int page, int size) {
+    public PageResponse<ReportResponse> list(ReportStatus status, ReportCategory category, UUID eventId,
+            int page, int size) {
         PageRequest pageable = PageRequest.of(Math.max(0, page), bounded(size),
                 Sort.by(Sort.Direction.ASC, "createdAt"));
-        Page<PhotoReport> result = status == null
-                ? reports.findAllByOrderByCreatedAtAsc(pageable)
-                : reports.findByStatusOrderByCreatedAtAsc(status, pageable);
+        Specification<PhotoReport> specification = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+            if (category != null) {
+                predicates.add(cb.equal(root.get("category"), category));
+            }
+            if (eventId != null) {
+                predicates.add(cb.equal(root.get("photo").get("event").get("id"), eventId));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+        Page<PhotoReport> result = reports.findAll(specification, pageable);
         return PageResponse.from(result, ReportResponse::from);
     }
 

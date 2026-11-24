@@ -588,6 +588,103 @@ class ModerationIntegrationIT extends AbstractAuthIntegrationTest {
                 .andExpect(status().isConflict());
     }
 
+    // ------------------------------------------------------- governance context
+
+    @Test
+    void governanceQueuesExposePhotoContextAndSupportFilters() throws Exception {
+        User admin = account(Role.ADMIN);
+        User uploader = account(Role.USER);
+        User reporter = account(Role.USER);
+        Event firstEvent = event(admin);
+        Event secondEvent = event(admin);
+        Album firstAlbum = album(firstEvent, admin);
+        Album secondAlbum = album(secondEvent, admin);
+        String adminAuth = auth(admin);
+        String uploadAuth = auth(uploader);
+        String reporterAuth = auth(reporter);
+
+        Submitted first = submitPhoto(uploadAuth, firstEvent.getId(), firstAlbum.getId());
+        Submitted second = submitPhoto(uploadAuth, secondEvent.getId(), secondAlbum.getId());
+        for (Submitted submitted : List.of(first, second)) {
+            mockMvc.perform(post("/api/v1/admin/photos/" + submitted.photoId() + "/approve")
+                            .header(HttpHeaders.AUTHORIZATION, adminAuth)
+                            .contentType(JSON)
+                            .content("{}"))
+                    .andExpect(status().isOk());
+        }
+
+        mockMvc.perform(post("/api/v1/photos/" + first.photoId() + "/reports")
+                        .header(HttpHeaders.AUTHORIZATION, reporterAuth)
+                        .contentType(JSON)
+                        .content("{\"category\":\"INAPPROPRIATE\",\"details\":\"first photo\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.photo.cloudinaryPublicId").doesNotExist());
+        mockMvc.perform(post("/api/v1/photos/" + second.photoId() + "/reports")
+                        .header(HttpHeaders.AUTHORIZATION, reporterAuth)
+                        .contentType(JSON)
+                        .content("{\"category\":\"PRIVACY\",\"details\":\"second photo\"}"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/admin/reports?status=PENDING&eventId=" + firstEvent.getId())
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].photo.id").value(first.photoId()))
+                .andExpect(jsonPath("$.items[0].photo.cloudinaryPublicId").isNotEmpty())
+                .andExpect(jsonPath("$.items[0].photo.title").value("Campus"))
+                .andExpect(jsonPath("$.items[0].photo.eventTitle").value(firstEvent.getTitle()))
+                .andExpect(jsonPath("$.items[0].photo.albumTitle").value(firstAlbum.getTitle()))
+                .andExpect(jsonPath("$.items[0].photo.uploaderDisplayName").value(uploader.getDisplayName()));
+
+        mockMvc.perform(get("/api/v1/admin/reports?eventId=" + secondEvent.getId() + "&category=PRIVACY")
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].photoId").value(second.photoId()));
+
+        mockMvc.perform(get("/api/v1/admin/reports?eventId=" + secondEvent.getId() + "&category=INAPPROPRIATE")
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isEmpty());
+
+        mockMvc.perform(post("/api/v1/me/photos/" + first.photoId() + "/removal-request")
+                        .header(HttpHeaders.AUTHORIZATION, uploadAuth)
+                        .contentType(JSON)
+                        .content("{\"reason\":\"subject asked for takedown\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.photo.cloudinaryPublicId").doesNotExist());
+
+        mockMvc.perform(get("/api/v1/admin/removal-requests?eventId=" + firstEvent.getId())
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].photo.id").value(first.photoId()))
+                .andExpect(jsonPath("$.items[0].photo.eventTitle").value(firstEvent.getTitle()))
+                .andExpect(jsonPath("$.items[0].photo.albumTitle").value(firstAlbum.getTitle()));
+
+        mockMvc.perform(get("/api/v1/admin/removal-requests?eventId=" + secondEvent.getId())
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isEmpty());
+
+        mockMvc.perform(get("/api/v1/admin/photos/" + first.photoId())
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(first.photoId()))
+                .andExpect(jsonPath("$.cloudinaryPublicId").isNotEmpty())
+                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.uploaderDisplayName").value(uploader.getDisplayName()));
+
+        mockMvc.perform(get("/api/v1/admin/photos/" + first.photoId())
+                        .header(HttpHeaders.AUTHORIZATION, reporterAuth))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/admin/photos/" + first.photoId()))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/admin/photos/" + UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth))
+                .andExpect(status().isNotFound());
+    }
+
     // ---------------------------------------------------------- removal requests
 
     @Test

@@ -16,6 +16,7 @@ import com.gecarchive.moderation.dto.ReportResponse;
 import com.gecarchive.moderation.dto.UpdatePhotoRequest;
 import com.gecarchive.moderation.entity.ModerationAction;
 import com.gecarchive.moderation.entity.RemovalRequestStatus;
+import com.gecarchive.moderation.entity.ReportCategory;
 import com.gecarchive.moderation.entity.ReportStatus;
 import com.gecarchive.moderation.service.PhotoModerationService;
 import com.gecarchive.moderation.service.PhotoRemovalRequestService;
@@ -64,6 +65,15 @@ public class AdminModerationController {
     @GetMapping("/photos/{id}/moderation-history")
     public List<ModerationHistoryEntryResponse> history(@PathVariable UUID id) {
         return moderation.history(id);
+    }
+
+    /**
+     * One photograph as moderators see it. Used by public-page admin controls
+     * that need the current status before choosing a transition.
+     */
+    @GetMapping("/photos/{id}")
+    public ModerationPhotoResponse photo(@PathVariable UUID id) {
+        return moderation.details(id);
     }
 
     @PatchMapping("/photos/{id}")
@@ -118,9 +128,11 @@ public class AdminModerationController {
     @GetMapping("/reports")
     public PageResponse<ReportResponse> reports(
             @RequestParam(required = false) ReportStatus status,
+            @RequestParam(required = false) ReportCategory category,
+            @RequestParam(required = false) UUID eventId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "24") int size) {
-        return reports.list(status, page, size);
+        return reports.list(status, category, eventId, page, size);
     }
 
     @PatchMapping("/reports/{id}")
@@ -133,9 +145,10 @@ public class AdminModerationController {
     @GetMapping("/removal-requests")
     public PageResponse<RemovalRequestResponse> removalRequests(
             @RequestParam(required = false) RemovalRequestStatus status,
+            @RequestParam(required = false) UUID eventId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "24") int size) {
-        return removalRequests.list(status, page, size);
+        return removalRequests.list(status, eventId, page, size);
     }
 
     @PatchMapping("/removal-requests/{id}")

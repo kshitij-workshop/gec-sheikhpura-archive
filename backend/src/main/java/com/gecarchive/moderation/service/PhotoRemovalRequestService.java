@@ -1,6 +1,8 @@
 package com.gecarchive.moderation.service;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -25,9 +27,12 @@ import com.gecarchive.photo.repository.PhotoRepository;
 import com.gecarchive.user.entity.User;
 import com.gecarchive.user.repository.UserRepository;
 
+import jakarta.persistence.criteria.Predicate;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -88,16 +93,25 @@ public class PhotoRemovalRequestService {
 
         audit.record(requester, "PHOTO_REMOVAL_REQUESTED", "PHOTO", photoId, null,
                 Map.of("requestId", request.getId().toString()), client);
-        return RemovalRequestResponse.from(request);
+        return RemovalRequestResponse.created(request);
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<RemovalRequestResponse> list(RemovalRequestStatus status, int page, int size) {
+    public PageResponse<RemovalRequestResponse> list(RemovalRequestStatus status, UUID eventId,
+            int page, int size) {
         PageRequest pageable = PageRequest.of(Math.max(0, page), bounded(size),
                 Sort.by(Sort.Direction.ASC, "createdAt"));
-        Page<PhotoRemovalRequest> result = status == null
-                ? requests.findAllByOrderByCreatedAtAsc(pageable)
-                : requests.findByStatusOrderByCreatedAtAsc(status, pageable);
+        Specification<PhotoRemovalRequest> specification = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+            if (eventId != null) {
+                predicates.add(cb.equal(root.get("photo").get("event").get("id"), eventId));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+        Page<PhotoRemovalRequest> result = requests.findAll(specification, pageable);
         return PageResponse.from(result, RemovalRequestResponse::from);
     }
 

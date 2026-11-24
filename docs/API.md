@@ -265,6 +265,8 @@ Any other pairing returns `409 Conflict`. `approved_at` and `approved_by_user_id
 
 Governance rules:
 
+- Governance list responses embed a `photo` summary (title, format, Cloudinary public ID, dimensions, status, event/album labels, uploader, upload date). It is an administrator-only disclosure used to preview the image in the queue; public and member responses never include it.
+- `GET /admin/reports` accepts optional `status`, `category` and `eventId` filters. `GET /admin/removal-requests` accepts optional `status` and `eventId`. Filters combine with AND and are applied in the database.
 - `POST /photos/{id}/reports` only resolves photographs that satisfy the public-visibility predicate, so pending and private submissions cannot be probed by identifier. One open (`PENDING` or `UNDER_REVIEW`) report per user per photograph.
 - `POST /me/photos/{id}/removal-request` is limited to the uploader; anyone else receives `404`. One `PENDING` request per user per photograph. Approving it drives the photograph through the shared `remove` transition.
 - `PATCH /admin/event-suggestions/{id}` only accepts `PENDING` suggestions. With `createEvent: true` it materialises an **unpublished** draft event, so nothing reaches the public archive until published separately.
@@ -319,6 +321,7 @@ Own submissions, own photographs, and own event suggestions carry the display la
 
 Album titles must be unique within one event and may repeat across events; the title is compared case-insensitively and archived albums release their title. Album slugs stay globally unique because they are public URLs: a generated slug is disambiguated with a numeric suffix (`2k24-batch`, `2k24-batch-2`), while an explicitly supplied colliding slug returns `409`. `PATCH /admin/albums/{id}` keeps the previous slug when `slug` is omitted, so renaming a title never breaks a shared link.
 | `GET` | `/api/v1/admin/moderation/photos` | Implemented | Moderation queue, optionally filtered by `status` |
+| `GET` | `/api/v1/admin/photos/{id}` | Implemented | One photograph as moderators see it, including the preview identifier |
 | `GET` | `/api/v1/admin/photos/{id}/moderation-history` | Implemented | Append-only transition history |
 | `POST` | `/api/v1/admin/photos/{id}/approve` | Implemented | Approve, assigning an album when absent |
 | `PATCH` | `/api/v1/admin/photos/{id}` | Implemented | Re-file or retitle a photograph without changing its status |
@@ -327,9 +330,9 @@ Album titles must be unique within one event and may repeat across events; the t
 | `POST` | `/api/v1/admin/photos/{id}/hide` | Implemented | Hide with reason |
 | `POST` | `/api/v1/admin/photos/{id}/remove` | Implemented | Remove with reason |
 | `POST` | `/api/v1/admin/photos/{id}/restore` | Implemented | Restore to `PENDING` with reason |
-| `GET` | `/api/v1/admin/reports` | Implemented | Reports, optionally filtered by `status` |
+| `GET` | `/api/v1/admin/reports` | Implemented | Reports with embedded photo context, filtered by `status`, `category`, or `eventId` |
 | `PATCH` | `/api/v1/admin/reports/{id}` | Implemented | Move to `UNDER_REVIEW`, `RESOLVED` or `DISMISSED` |
-| `GET` | `/api/v1/admin/removal-requests` | Implemented | Removal requests, optionally filtered by `status` |
+| `GET` | `/api/v1/admin/removal-requests` | Implemented | Removal requests with embedded photo context, filtered by `status` or `eventId` |
 | `PATCH` | `/api/v1/admin/removal-requests/{id}` | Implemented | Approve (which removes the photo) or reject |
 | `GET` | `/api/v1/admin/event-suggestions` | Implemented | Event suggestions, optionally filtered by `status` |
 | `PATCH` | `/api/v1/admin/event-suggestions/{id}` | Implemented | Review suggestion, optionally creating an event |
