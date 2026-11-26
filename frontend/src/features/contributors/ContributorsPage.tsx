@@ -2,12 +2,11 @@ import { useSearchParams } from 'react-router'
 
 import {
   Alert,
-  Card,
   EmptyState,
-  PageHeader,
   Pagination,
   Skeleton,
 } from '../../components/ui'
+import { EditorialHeader } from '../../components/editorial/EditorialHeader'
 import { useContributors } from './queries'
 
 const PAGE_SIZE = 24
@@ -47,8 +46,8 @@ export default function ContributorsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <PageHeader
+    <div className="space-y-12">
+      <EditorialHeader
         eyebrow="People"
         title="Contributors"
         description="Photographers and community members who have published profiles in the archive. Every credited photographer is named on the photographs they contributed."
@@ -63,7 +62,7 @@ export default function ContributorsPage() {
       ) : null}
 
       {contributors.data ? (
-        <p className="text-sm text-archive-muted" aria-live="polite">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-archive-muted" aria-live="polite">
           {contributors.data.totalElements === 1
             ? '1 published contributor'
             : `${String(contributors.data.totalElements)} published contributors`}
@@ -71,14 +70,11 @@ export default function ContributorsPage() {
       ) : null}
 
       {contributors.isPending ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-px border border-archive-line bg-archive-line sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }, (_, index) => (
-            <div
-              key={index}
-              className="space-y-3 rounded-xl border border-archive-line bg-archive-surface p-5"
-            >
-              <Skeleton className="h-12 w-12 rounded-full" />
-              <Skeleton className="h-5 w-32" />
+            <div key={index} className="space-y-4 bg-archive-paper p-6">
+              <Skeleton className="h-12 w-12" />
+              <Skeleton className="h-6 w-32" />
               <Skeleton className="h-16 w-full" />
             </div>
           ))}
@@ -94,21 +90,26 @@ export default function ContributorsPage() {
 
       {contributors.data && contributors.data.items.length > 0 ? (
         <>
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid gap-px border border-archive-line bg-archive-line sm:grid-cols-2 lg:grid-cols-3">
             {contributors.data.items.map((contributor) => (
-              <li key={contributor.id}>
-                <Card className="flex h-full flex-col gap-3 p-5">
-                  <span
-                    aria-hidden="true"
-                    className="flex h-12 w-12 items-center justify-center rounded-full bg-archive-accent-soft font-serif text-lg font-semibold text-archive-accent"
-                  >
-                    {initials(contributor.displayName)}
-                  </span>
+              <li key={contributor.id} className="bg-archive-paper">
+                <article className="flex h-full flex-col gap-5 p-6 transition-colors duration-300 hover:bg-archive-surface sm:p-7">
+                  <div className="flex items-start justify-between gap-4">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-12 w-12 items-center justify-center border border-archive-accent/40 font-serif text-sm tracking-[0.08em] text-archive-accent"
+                    >
+                      {initials(contributor.displayName)}
+                    </span>
+                    <span className="text-[10px] uppercase tracking-[0.18em] text-archive-muted">
+                      Contributor
+                    </span>
+                  </div>
                   <div className="space-y-1">
-                    <h2 className="font-serif text-xl font-semibold leading-snug tracking-tight">
+                    <h2 className="font-serif text-2xl font-normal leading-snug tracking-tight text-archive-ink">
                       {contributor.displayName}
                     </h2>
-                    <p className="text-xs uppercase tracking-[0.15em] text-archive-muted">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-archive-muted">
                       @{contributor.slug}
                     </p>
                   </div>
@@ -121,7 +122,7 @@ export default function ContributorsPage() {
                       No biography provided.
                     </p>
                   )}
-                </Card>
+                </article>
               </li>
             ))}
           </ul>

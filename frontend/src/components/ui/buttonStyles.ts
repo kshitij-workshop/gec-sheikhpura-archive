@@ -9,21 +9,20 @@ export interface ButtonStyleOptions {
 }
 
 const base =
-  'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60'
+  'inline-flex items-center justify-center gap-2 rounded-sm font-medium tracking-[0.01em] transition-colors disabled:cursor-not-allowed disabled:opacity-60'
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    'bg-archive-ink text-archive-paper hover:bg-stone-700 active:bg-stone-800',
+    'bg-archive-ink text-archive-paper hover:bg-archive-ink/90 active:bg-archive-ink/80',
   secondary:
-    'border border-archive-line bg-archive-surface text-archive-ink hover:border-stone-300 hover:bg-stone-50',
-  ghost:
-    'text-archive-muted hover:bg-stone-100 hover:text-archive-ink',
-  danger: 'bg-archive-danger text-white hover:bg-red-800 active:bg-red-900',
+    'border border-archive-line bg-transparent text-archive-ink hover:border-archive-accent hover:text-archive-accent',
+  ghost: 'text-archive-muted hover:bg-archive-accent-soft hover:text-archive-ink',
+  danger: 'bg-archive-danger text-white hover:opacity-90 active:opacity-80',
 }
 
 const sizes: Record<ButtonSize, string> = {
   sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-sm',
+  md: 'px-5 py-2.5 text-sm',
 }
 
 /**

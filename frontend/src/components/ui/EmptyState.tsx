@@ -16,7 +16,7 @@ export function EmptyState({
   return (
     <div
       className={[
-        'flex flex-col items-center gap-3 rounded-xl border border-dashed border-archive-line bg-archive-surface px-6 py-12 text-center',
+        'flex flex-col items-center gap-3 rounded-sm border border-dashed border-archive-line bg-archive-surface px-6 py-14 text-center',
         className,
       ]
         .filter(Boolean)

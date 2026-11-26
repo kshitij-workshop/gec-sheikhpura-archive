@@ -35,7 +35,7 @@ export function PhotoImage({
         role="img"
         aria-label={alt}
         className={[
-          'flex items-center justify-center bg-stone-100 p-4 text-center text-xs text-archive-muted',
+          'flex items-center justify-center bg-archive-surface p-4 text-center text-xs text-archive-muted',
           className,
         ]
           .filter(Boolean)

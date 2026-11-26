@@ -80,7 +80,7 @@ export function Dialog({
           onClose()
         }
       }}
-      className="w-[min(32rem,calc(100vw-3rem))] rounded-xl border border-archive-line bg-archive-surface p-0 text-archive-ink shadow-xl backdrop:bg-stone-900/50"
+      className="w-[min(32rem,calc(100vw-3rem))] rounded-sm border border-archive-line bg-archive-surface p-0 text-archive-ink shadow-2xl backdrop:bg-black/70"
     >
       <div className="flex max-h-[85vh] flex-col">
         <div className="flex items-start justify-between gap-4 border-b border-archive-line px-5 py-4">
@@ -101,7 +101,7 @@ export function Dialog({
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="rounded p-1 text-archive-muted transition-colors hover:bg-stone-100 hover:text-archive-ink"
+            className="rounded-sm p-1 text-archive-muted transition-colors hover:bg-archive-accent-soft hover:text-archive-ink"
           >
             <span aria-hidden="true" className="text-lg leading-none">
               ×

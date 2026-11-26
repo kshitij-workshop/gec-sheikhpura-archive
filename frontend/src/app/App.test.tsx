@@ -39,7 +39,7 @@ describe('application shell', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: /photographic memory of the college/i,
+        name: /every moment/i,
       }),
     ).toBeInTheDocument()
     expect(

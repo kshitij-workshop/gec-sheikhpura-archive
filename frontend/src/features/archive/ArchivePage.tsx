@@ -1,18 +1,24 @@
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 
 import {
   Alert,
   Button,
   EmptyState,
-  PageHeader,
   Pagination,
   Skeleton,
+  buttonStyles,
 } from '../../components/ui'
+import { EditorialHeader } from '../../components/editorial/EditorialHeader'
 import type { EventQuery } from '../../lib/api/archiveApi'
 import type { ArchiveFilterValues } from './components/ArchiveFilters'
 import { ArchiveFilters } from './components/ArchiveFilters'
 import { EventCard } from './components/EventCard'
-import { useAcademicYears, useCategories, useEvents } from './queries'
+import {
+  useAcademicYears,
+  useCategories,
+  useEvents,
+  usePhotoIndex,
+} from './queries'
 
 const PAGE_SIZE = 12
 
@@ -43,6 +49,7 @@ export default function ArchivePage() {
   }
 
   const events = useEvents(eventQuery)
+  const covers = usePhotoIndex()
   const years = useAcademicYears()
   const categories = useCategories()
 
@@ -106,11 +113,19 @@ export default function ArchivePage() {
     values.featured
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        eyebrow="Explore"
+    <div className="space-y-12">
+      <EditorialHeader
+        eyebrow="The collection"
         title="The archive"
-        description="Published events, albums, and approved photographs from Government Engineering College, Sheikhpura."
+        description="Every event and every photograph from Government Engineering College, Sheikhpura."
+        actions={
+          <Link
+            to="/contribute"
+            className={buttonStyles({ variant: 'primary' })}
+          >
+            Add photos
+          </Link>
+        }
       />
 
       <ArchiveFilters
@@ -124,22 +139,22 @@ export default function ArchivePage() {
       <section
         id="archive-results"
         aria-labelledby="archive-results-heading"
-        className="scroll-mt-24 space-y-4"
+        className="scroll-mt-28 space-y-6"
       >
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-archive-line pt-6">
           <h2
             id="archive-results-heading"
-            className="font-serif text-2xl font-semibold tracking-tight"
+            className="font-serif text-2xl font-normal tracking-tight text-archive-ink"
           >
             Events
           </h2>
-          {events.data ? (
-            <p className="text-sm text-archive-muted" aria-live="polite">
-              {events.data.totalElements === 1
+          <p className="text-[11px] uppercase tracking-[0.18em] text-archive-muted">
+            {events.data
+              ? events.data.totalElements === 1
                 ? '1 event'
-                : `${String(events.data.totalElements)} events`}
-            </p>
-          ) : null}
+                : `${String(events.data.totalElements)} events`
+              : 'Loading'}
+          </p>
         </div>
 
         {events.isError ? (
@@ -151,16 +166,17 @@ export default function ArchivePage() {
         ) : null}
 
         {events.isPending ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }, (_, index) => (
               <div
                 key={index}
-                className="space-y-3 rounded-xl border border-archive-line bg-archive-surface p-5"
+                className="border border-archive-line bg-archive-surface/30"
               >
-                <Skeleton className="h-5 w-24" />
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-6 w-full" />
-                <Skeleton className="h-16 w-full" />
+                <Skeleton className="aspect-[4/3] w-full" />
+                <div className="space-y-3 p-4">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-6 w-3/4" />
+                </div>
               </div>
             ))}
           </div>
@@ -187,10 +203,10 @@ export default function ArchivePage() {
 
         {events.data && events.data.items.length > 0 ? (
           <>
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {events.data.items.map((event) => (
                 <li key={event.id}>
-                  <EventCard event={event} />
+                  <EventCard event={event} cover={covers.eventCovers.get(event.id)} />
                 </li>
               ))}
             </ul>
@@ -200,7 +216,7 @@ export default function ArchivePage() {
               totalPages={events.data.totalPages}
               onPageChange={changePage}
               disabled={events.isFetching}
-              className="pt-2"
+              className="pt-4"
             />
           </>
         ) : null}

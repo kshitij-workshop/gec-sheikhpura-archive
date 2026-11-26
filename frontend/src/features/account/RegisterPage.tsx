@@ -11,6 +11,7 @@ import {
   TextField,
   buttonStyles,
 } from '../../components/ui'
+import { AccountFrame } from '../../components/editorial/AccountFrame'
 import { registerAccount } from '../../lib/api/accountApi'
 import { requestFailureMessage } from '../../lib/api/errorMessage'
 import { passwordProblem } from '../../lib/passwordPolicy'
@@ -145,14 +146,12 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
-      <PageHeader
-        eyebrow="Account"
-        title="Create your account"
-        description="Members can contribute photographs, suggest events, and track their submissions through moderation."
-      />
-
-      <Card className="space-y-4 p-6">
+    <AccountFrame
+      eyebrow="Account"
+      title="Create your account"
+      description="Members can contribute photographs, suggest events, and track their submissions through moderation."
+    >
+      <Card className="space-y-5 p-6 sm:p-8">
         {success ? (
           <Alert tone="success" title="Check your email">
             <p>{success}</p>
@@ -250,6 +249,6 @@ export default function RegisterPage() {
           </>
         )}
       </Card>
-    </div>
+    </AccountFrame>
   )
 }

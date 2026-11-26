@@ -2,11 +2,12 @@ export interface SkeletonProps {
   className?: string
 }
 
-export function Skeleton({ className = 'h-4 w-full' }: SkeletonProps) {
+/** Neutral placeholder used while a section loads. */
+export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       aria-hidden="true"
-      className={`animate-pulse rounded bg-stone-200/80 ${className}`}
+      className={`animate-pulse rounded-sm bg-archive-line/70 ${className ?? ''}`}
     />
   )
 }

@@ -9,10 +9,10 @@ const sections = [
 
 function sectionClasses({ isActive }: { isActive: boolean }): string {
   return [
-    'block rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+    'block border-b-2 px-1 py-2.5 text-sm font-medium transition-colors',
     isActive
-      ? 'bg-archive-ink text-archive-paper'
-      : 'text-archive-muted hover:bg-stone-100 hover:text-archive-ink',
+      ? 'border-archive-accent text-archive-ink'
+      : 'border-transparent text-archive-muted hover:text-archive-ink',
   ].join(' ')
 }
 
@@ -23,28 +23,23 @@ function sectionClasses({ isActive }: { isActive: boolean }): string {
  */
 export default function AdminLayout() {
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-[0.25em] text-archive-accent">
-            Administration
-          </p>
-          <nav aria-label="Administration">
-            <ul className="flex flex-wrap items-center gap-1">
-              {sections.map((section) => (
-                <li key={section.to}>
-                  <NavLink to={section.to} className={sectionClasses}>
-                    {section.label}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </div>
+    <div className="workspace space-y-6 border border-archive-line bg-archive-paper p-4 text-archive-ink sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-archive-line">
+        <nav aria-label="Administration" className="overflow-x-auto">
+          <ul className="flex min-w-max items-center gap-5">
+            {sections.map((section) => (
+              <li key={section.to}>
+                <NavLink to={section.to} className={sectionClasses}>
+                  {section.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
         <Link
           to="/dashboard"
-          className="rounded-full border border-archive-line px-3 py-1.5 text-sm font-medium text-archive-ink transition-colors hover:border-stone-300"
+          className="mb-1 text-sm font-medium text-archive-muted underline-offset-4 transition-colors hover:text-archive-accent hover:underline"
         >
           Member dashboard
         </Link>

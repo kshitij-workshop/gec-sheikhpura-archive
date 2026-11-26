@@ -83,8 +83,8 @@ describe('AlbumPage', () => {
     const figure = view.closest('figure')
 
     expect(figure).not.toBeNull()
-    // The matte frame is the white mount that holds the print.
-    expect(figure).toHaveClass('bg-white')
+    // The print sits inside a framed matte.
+    expect(figure).toHaveClass('bg-archive-surface/50')
     expect(within(figure!).getByText('Opening ceremony')).toBeInTheDocument()
     expect(within(figure!).getByText('Asha Verma')).toBeInTheDocument()
   })

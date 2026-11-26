@@ -68,10 +68,10 @@ export function Pagination({
                 aria-current={isCurrent ? 'page' : undefined}
                 aria-label={`Page ${String(item + 1)}`}
                 className={[
-                  'min-w-9 rounded px-2 py-1 text-sm font-medium transition-colors',
+                  'min-w-9 rounded-sm px-2 py-1 text-sm font-medium transition-colors',
                   isCurrent
                     ? 'bg-archive-ink text-archive-paper'
-                    : 'text-archive-muted hover:bg-stone-100 hover:text-archive-ink',
+                    : 'text-archive-muted hover:bg-archive-accent-soft hover:text-archive-ink',
                 ].join(' ')}
               >
                 {item + 1}

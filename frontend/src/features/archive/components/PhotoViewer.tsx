@@ -104,71 +104,43 @@ export function PhotoViewer({
           onClose()
         }
       }}
-      className="w-[min(72rem,calc(100vw-2rem))] rounded-xl border border-archive-line bg-archive-paper p-0 text-archive-ink shadow-2xl backdrop:bg-stone-900/70"
+      className="w-[min(96rem,calc(100vw-1rem))] border border-archive-line bg-[#0b0b0b] p-0 text-archive-ink shadow-2xl backdrop:bg-black/85"
     >
       {photo ? (
-        <div className="flex max-h-[90vh] flex-col">
-          <div className="flex items-start justify-between gap-4 border-b border-archive-line px-5 py-3">
-            <div className="space-y-0.5">
-              <h2
-                id={titleId}
-                className="font-serif text-lg font-semibold tracking-tight"
+        <div className="flex max-h-[94vh] flex-col lg:grid lg:max-h-[90vh] lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="flex min-h-0 flex-col">
+            <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
+              <p
+                aria-live="polite"
+                className="text-[11px] uppercase tracking-[0.22em] text-archive-muted"
               >
-                {photo.title?.trim() || 'Untitled photograph'}
-              </h2>
-              <p aria-live="polite" className="text-xs text-archive-muted">
                 {currentIndex + 1} of {photos.length}
               </p>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close photograph"
+                className="flex h-9 w-9 items-center justify-center border border-archive-line text-archive-muted transition-colors hover:border-archive-accent hover:text-archive-accent"
+              >
+                <span aria-hidden="true" className="text-xl leading-none">
+                  ×
+                </span>
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close photograph"
-              className="rounded p-1 text-archive-muted transition-colors hover:bg-stone-100 hover:text-archive-ink"
-            >
-              <span aria-hidden="true" className="text-xl leading-none">
-                ×
-              </span>
-            </button>
-          </div>
 
-          <div className="min-h-0 flex-1 overflow-auto bg-stone-950/95 p-4 sm:p-6">
-            <div className="mx-auto w-fit max-w-full rounded-sm border border-stone-800/60 bg-archive-paper p-3 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.9)]">
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-black px-2 pb-3 sm:px-6 sm:pb-6">
               <PhotoImage
                 photo={photo}
-                width={1600}
-                className="mx-auto max-h-[62vh] w-auto max-w-full object-contain"
+                width={2000}
+                className="max-h-[58vh] w-auto max-w-full object-contain lg:max-h-[76vh]"
                 eager
               />
             </div>
-          </div>
 
-          <div className="space-y-2 border-t border-archive-line px-5 py-4">
-            {photo.caption ? (
-              <p className="font-serif text-sm leading-relaxed text-archive-ink">
-                {photo.caption}
-              </p>
-            ) : null}
-            <p className="text-xs text-archive-muted">
-              <span className="font-medium text-archive-ink">
-                Photograph by{' '}
-              </span>
-              {formatCredits(photo.photographers.map((credit) => credit.creditName))}
-              {photo.takenAt ? ` · Taken ${formatTimestamp(photo.takenAt)}` : ''}
-            </p>
-
-            <PhotoActions key={photo.id} photo={photo} className="pt-1" />
-
-            <AdminPhotoMenu
-              photoId={photo.id}
-              photoTitle={photo.title}
-              className="pt-1"
-            />
-
-            <div className="flex items-center justify-between gap-2 pt-1">
+            <div className="flex items-center justify-between gap-2 border-t border-archive-line px-4 py-3 sm:px-6">
               <Button
                 type="button"
-                variant="secondary"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
                   if (hasPrevious) {
@@ -177,11 +149,11 @@ export function PhotoViewer({
                 }}
                 disabled={!hasPrevious}
               >
-                Previous
+                <span aria-hidden="true">←</span> Previous
               </Button>
               <Button
                 type="button"
-                variant="secondary"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
                   if (hasNext) {
@@ -190,10 +162,59 @@ export function PhotoViewer({
                 }}
                 disabled={!hasNext}
               >
-                Next
+                Next <span aria-hidden="true">→</span>
               </Button>
             </div>
           </div>
+
+          <aside className="min-h-0 space-y-5 overflow-y-auto border-t border-archive-line p-5 sm:p-6 lg:border-l lg:border-t-0">
+            <div className="space-y-2">
+              <p className="eyebrow text-archive-accent">Photograph</p>
+              <h2
+                id={titleId}
+                className="font-serif text-2xl font-normal leading-tight tracking-tight"
+              >
+                {photo.title?.trim() || 'Untitled photograph'}
+              </h2>
+              {photo.caption ? (
+                <p className="text-sm leading-relaxed text-archive-muted">
+                  {photo.caption}
+                </p>
+              ) : null}
+            </div>
+
+            <dl className="space-y-3 border-t border-archive-line pt-4 text-sm">
+              <div className="space-y-1">
+                <dt className="eyebrow text-archive-muted">Photograph by</dt>
+                <dd className="text-archive-ink">
+                  {formatCredits(
+                    photo.photographers.map((credit) => credit.creditName),
+                  )}
+                </dd>
+              </div>
+              {photo.takenAt ? (
+                <div className="space-y-1">
+                  <dt className="eyebrow text-archive-muted">Taken</dt>
+                  <dd className="text-archive-ink">
+                    {formatTimestamp(photo.takenAt)}
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+
+            <div className="space-y-3 border-t border-archive-line pt-4">
+              <PhotoActions key={photo.id} photo={photo} />
+              <AdminPhotoMenu
+                photoId={photo.id}
+                photoTitle={photo.title}
+              />
+            </div>
+
+            <p className="border-t border-archive-line pt-4 text-[11px] leading-relaxed text-archive-muted">
+              Use the arrow keys to move between photographs. Press Escape to
+              close.
+            </p>
+          </aside>
         </div>
       ) : null}
     </dialog>

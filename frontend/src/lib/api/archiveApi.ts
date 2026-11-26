@@ -86,6 +86,14 @@ export function fetchAlbumBySlug(
   )
 }
 
+/**
+ * First approved photograph of an album, used as a cover. It reuses the public
+ * album endpoint with a one-item page instead of introducing a new contract.
+ */
+export function fetchAlbumPreview(slug: string): Promise<AlbumDetail> {
+  return fetchAlbumBySlug(slug, 0, 1)
+}
+
 export function fetchAcademicYears(): Promise<AcademicYear[]> {
   return publicRequest('academic-years')
 }

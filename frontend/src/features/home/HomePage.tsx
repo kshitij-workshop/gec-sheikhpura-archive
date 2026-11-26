@@ -2,49 +2,44 @@ import { Link } from 'react-router'
 
 import {
   Alert,
-  Badge,
-  Card,
   EmptyState,
-  PageHeader,
   Skeleton,
   buttonStyles,
 } from '../../components/ui'
+import { SectionHeading } from '../../components/editorial/SectionHeading'
 import { EventCard } from '../archive/components/EventCard'
-import { PhotoActions } from '../archive/components/PhotoActions'
 import { PhotoImage } from '../archive/components/PhotoImage'
-import { AdminPhotoMenu } from '../admin/AdminPhotoMenu'
-import { useAcademicYears, useEvents, useRecentPhotos } from '../archive/queries'
+import {
+  useAcademicYears,
+  useEvents,
+  usePhotoIndex,
+} from '../archive/queries'
+import type { RecentPhoto } from '../../lib/api/types'
 
-const values = [
-  {
-    title: 'Reviewed before publication',
-    description:
-      'Every community submission enters moderation. Pending and rejected photographs are never reachable from the public archive.',
-  },
-  {
-    title: 'Attribution, always',
-    description:
-      'Uploading and photographing are separate roles. Photographer credits are recorded explicitly and shown with each published photograph.',
-  },
-  {
-    title: 'Privacy respected',
-    description:
-      'No facial recognition and no automatic identification. Visitors can report a photograph, and removal requests are reviewed by administrators.',
-  },
+const galleryLayout = [
+  { ratio: 'aspect-[4/5]', width: 900, height: 1125 },
+  { ratio: 'aspect-square', width: 640, height: 640 },
+  { ratio: 'aspect-[3/4]', width: 640, height: 853 },
+  { ratio: 'aspect-square', width: 640, height: 640 },
+  { ratio: 'aspect-[4/5]', width: 900, height: 1125 },
+  { ratio: 'aspect-square', width: 640, height: 640 },
+  { ratio: 'aspect-[3/4]', width: 640, height: 853 },
+  { ratio: 'aspect-[4/5]', width: 640, height: 800 },
 ] as const
 
 function EventGridSkeleton() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }, (_, index) => (
         <div
           key={index}
-          className="space-y-3 rounded-xl border border-archive-line bg-archive-surface p-5"
+          className="border border-archive-line bg-archive-surface/30"
         >
-          <Skeleton className="h-5 w-24" />
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="h-6 w-full" />
-          <Skeleton className="h-16 w-full" />
+          <Skeleton className="aspect-[4/3] w-full" />
+          <div className="space-y-3 p-4">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-6 w-3/4" />
+          </div>
         </div>
       ))}
     </div>
@@ -53,161 +48,240 @@ function EventGridSkeleton() {
 
 function PhotoGridSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+    <div className="columns-2 gap-3 sm:columns-3 sm:gap-4">
       {Array.from({ length: 6 }, (_, index) => (
-        <div key={index} className="space-y-2 rounded-lg border border-archive-line bg-white p-2">
-          <Skeleton className="aspect-square w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-3 w-1/2" />
+        <div key={index} className="mb-3 break-inside-avoid sm:mb-4">
+          <Skeleton
+            className={index % 3 === 0 ? 'aspect-[4/5] w-full' : 'aspect-square w-full'}
+          />
+          <Skeleton className="mt-3 h-4 w-3/4" />
         </div>
       ))}
     </div>
   )
 }
 
+function GalleryItem({ photo, index }: { photo: RecentPhoto; index: number }) {
+  const layout = galleryLayout[index % galleryLayout.length]!
+
+  return (
+    <li className="mb-3 break-inside-avoid sm:mb-4">
+      <figure>
+        <Link
+          to={`/albums/${photo.albumSlug}`}
+          className="group block overflow-hidden border border-archive-line bg-archive-surface"
+        >
+          <PhotoImage
+            photo={photo}
+            width={layout.width}
+            height={layout.height}
+            crop="fill"
+            eager={index === 0}
+            className={`w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03] ${layout.ratio}`}
+          />
+        </Link>
+        <figcaption className="mt-2.5 space-y-1">
+          <p className="line-clamp-1 font-serif text-base leading-snug text-archive-ink">
+            {photo.title?.trim() || 'Untitled photograph'}
+          </p>
+          <p className="line-clamp-1 text-[10px] uppercase tracking-[0.12em] text-archive-muted">
+            {photo.eventTitle} · {photo.albumTitle}
+          </p>
+        </figcaption>
+      </figure>
+    </li>
+  )
+}
+
 export default function HomePage() {
-  const recentPhotos = useRecentPhotos(6)
+  const photos = usePhotoIndex(60)
   const latest = useEvents({ size: 6 })
   const years = useAcademicYears()
 
-  const archiveUnavailable = recentPhotos.isError || latest.isError
+  const archiveUnavailable = photos.isError || latest.isError
+  const heroPhoto = photos.photos[0]
+  const galleryPhotos = photos.photos.slice(0, 8)
+  const ctaPhoto = photos.photos[4] ?? photos.photos[0]
+  const events = latest.data?.items ?? []
+  const yearsCount = years.data?.length ?? 0
 
   return (
-    <div className="space-y-14">
-      <PageHeader
-        eyebrow="The GEC Sheikhpura archive"
-        title="A photographic memory of the college, kept by its community."
-        description="Events, people, and places from Government Engineering College, Sheikhpura — collected, credited, and published with care for future generations."
-        actions={
-          <>
-            <Link to="/archive" className={buttonStyles({ variant: 'primary' })}>
-              Explore the archive
-            </Link>
-            <Link
-              to="/contribute"
-              className={buttonStyles({ variant: 'secondary' })}
-            >
-              Share photographs
-            </Link>
-          </>
-        }
-      />
+    <div className="space-y-16 pb-4 sm:space-y-20">
+      <section className="border-b border-archive-line pb-12 sm:pb-16">
+        <div className="grid gap-6 lg:grid-cols-12 lg:items-stretch lg:gap-8">
+          <div className="lg:col-span-8">
+            {photos.isPending ? (
+              <Skeleton className="aspect-[4/5] w-full sm:aspect-[16/10] lg:aspect-[16/9]" />
+            ) : heroPhoto ? (
+              <figure className="fade-in">
+                <div className="overflow-hidden border border-archive-line bg-archive-surface">
+                  <PhotoImage
+                    photo={heroPhoto}
+                    width={1600}
+                    height={900}
+                    crop="fill"
+                    eager
+                    className="aspect-[4/5] w-full object-cover sm:aspect-[16/10] lg:aspect-[16/9]"
+                  />
+                </div>
+                <figcaption className="mt-2 flex items-center justify-between gap-4 text-[10px] uppercase tracking-[0.14em] text-archive-muted">
+                  <span className="line-clamp-1">
+                    {heroPhoto.title?.trim() || 'From the archive'}
+                  </span>
+                  <span className="shrink-0 text-archive-accent">Latest addition</span>
+                </figcaption>
+              </figure>
+            ) : (
+              <div className="flex aspect-[4/5] flex-col items-center justify-center gap-4 border border-archive-line bg-archive-surface p-6 text-center sm:aspect-[16/10] lg:aspect-[16/9]">
+                <p className="eyebrow text-archive-accent">The collection</p>
+                <p className="max-w-sm font-serif text-2xl leading-tight tracking-tight text-archive-ink">
+                  The first photographs are being reviewed.
+                </p>
+                <Link
+                  to="/contribute"
+                  className={buttonStyles({ variant: 'secondary', size: 'sm' })}
+                >
+                  Add a photograph
+                </Link>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col justify-between lg:col-span-4">
+            <div>
+              <p className="eyebrow text-archive-accent">
+                Government Engineering College · Sheikhpura
+              </p>
+              <h1 className="mt-5 font-serif text-[clamp(2.75rem,6vw,4.5rem)] font-normal leading-[0.92] tracking-[-0.04em] text-archive-ink">
+                Every Moment.
+                <br />
+                <span className="italic text-archive-accent">One Campus.</span>
+                <br />
+                Forever.
+              </h1>
+              <p className="mt-5 max-w-sm text-sm leading-relaxed text-archive-muted">
+                The college, remembered in photographs.
+              </p>
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <Link
+                  to="/archive"
+                  className={buttonStyles({ variant: 'primary' })}
+                >
+                  Explore the archive
+                </Link>
+                <Link
+                  to="/contribute"
+                  className={buttonStyles({ variant: 'secondary' })}
+                >
+                  Add your photos
+                </Link>
+              </div>
+            </div>
+
+            <dl className="mt-10 grid grid-cols-3 gap-4 border-t border-archive-line pt-5">
+              <div>
+                <dt className="eyebrow text-archive-muted">Photos</dt>
+                <dd className="mt-1.5 font-serif text-2xl tracking-tight text-archive-ink">
+                  {photos.data ? photos.data.totalElements : '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="eyebrow text-archive-muted">Events</dt>
+                <dd className="mt-1.5 font-serif text-2xl tracking-tight text-archive-ink">
+                  {latest.data ? latest.data.totalElements : '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="eyebrow text-archive-muted">Years</dt>
+                <dd className="mt-1.5 font-serif text-2xl tracking-tight text-archive-ink">
+                  {yearsCount > 0 ? yearsCount : '—'}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </section>
 
       {archiveUnavailable ? (
         <Alert tone="warning" title="The archive is temporarily unavailable">
-          Published events could not be loaded right now. You can still browse
-          the archive page or try again in a moment.
+          Photos could not be loaded right now. Please try again in a moment.
         </Alert>
       ) : null}
 
-      <section aria-labelledby="recent-photos-heading" className="space-y-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2
-            id="recent-photos-heading"
-            className="font-serif text-2xl font-semibold tracking-tight"
-          >
-            Recently added photographs
-          </h2>
-          <Link
-            to="/archive"
-            className="text-sm font-medium text-archive-accent underline-offset-4 hover:underline"
-          >
-            Browse the archive
-          </Link>
-        </div>
+      <section aria-labelledby="recent-photos-heading" className="space-y-6">
+        <SectionHeading
+          id="recent-photos-heading"
+          index="01"
+          title="Recently added photographs"
+          action={
+            <Link
+              to="/archive"
+              className="editorial-link text-sm font-medium text-archive-ink"
+            >
+              Browse the archive
+            </Link>
+          }
+        />
 
-        {recentPhotos.isPending ? <PhotoGridSkeleton /> : null}
+        {photos.isPending ? <PhotoGridSkeleton /> : null}
 
-        {recentPhotos.data && recentPhotos.data.items.length === 0 ? (
+        {photos.data && photos.data.items.length === 0 ? (
           <EmptyState
             title="No photographs published yet"
-            description="Approved photographs appear here as moderators complete the first review."
+            description="The first reviewed photographs will appear here."
             action={
               <Link
                 to="/contribute"
                 className={buttonStyles({ variant: 'secondary' })}
               >
-                Share photographs
+                Add photos
               </Link>
             }
           />
         ) : null}
 
-        {recentPhotos.data && recentPhotos.data.items.length > 0 ? (
-          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {recentPhotos.data.items.map((photo) => (
-              <li key={photo.id}>
-                <div className="flex h-full flex-col rounded-lg border border-archive-line bg-white p-2 shadow-[0_1px_2px_rgba(28,25,23,0.06),0_10px_24px_-14px_rgba(28,25,23,0.28)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(28,25,23,0.08),0_18px_34px_-16px_rgba(28,25,23,0.38)]">
-                  <Link
-                    to={`/albums/${photo.albumSlug}`}
-                    className="group block"
-                  >
-                    <figure>
-                      <span className="block overflow-hidden rounded-[3px] bg-stone-100">
-                        <PhotoImage
-                          photo={photo}
-                          width={320}
-                          height={320}
-                          crop="fill"
-                          className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                        />
-                      </span>
-                      <figcaption className="mt-2 space-y-0.5 px-1 pb-1">
-                        <p className="line-clamp-1 font-serif text-sm font-medium leading-snug text-archive-ink">
-                          {photo.title?.trim() || 'Untitled photograph'}
-                        </p>
-                        <p className="line-clamp-1 text-xs text-archive-muted">
-                          {photo.eventTitle} · {photo.albumTitle}
-                        </p>
-                      </figcaption>
-                    </figure>
-                  </Link>
-                  <div className="mt-auto px-1 pb-1 pt-2">
-                    <PhotoActions photo={photo} compact />
-                    <AdminPhotoMenu
-                      photoId={photo.id}
-                      photoTitle={photo.title}
-                      compact
-                      className="pt-1"
-                    />
-                  </div>
-                </div>
-              </li>
+        {galleryPhotos.length > 0 ? (
+          <ul className="columns-2 gap-3 sm:columns-3 sm:gap-4">
+            {galleryPhotos.map((photo, index) => (
+              <GalleryItem key={photo.id} photo={photo} index={index} />
             ))}
           </ul>
         ) : null}
       </section>
 
-      <section aria-labelledby="latest-heading" className="space-y-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2
-            id="latest-heading"
-            className="font-serif text-2xl font-semibold tracking-tight"
-          >
-            Recently added
-          </h2>
-          <Link
-            to="/archive"
-            className="text-sm font-medium text-archive-accent underline-offset-4 hover:underline"
-          >
-            View every event
-          </Link>
-        </div>
+      <section aria-labelledby="latest-heading" className="space-y-6">
+        <SectionHeading
+          id="latest-heading"
+          index="02"
+          title="Recently added"
+          action={
+            <Link
+              to="/archive"
+              className="editorial-link text-sm font-medium text-archive-ink"
+            >
+              View every event
+            </Link>
+          }
+        />
 
         {latest.isPending ? <EventGridSkeleton /> : null}
 
         {latest.data && latest.data.items.length === 0 ? (
           <EmptyState
             title="The public archive is just getting started"
-            description="Published events will appear here as administrators complete the first collection."
+            description="New events will appear here once they are published."
           />
         ) : null}
 
-        {latest.data && latest.data.items.length > 0 ? (
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {latest.data.items.map((event) => (
+        {events.length > 0 ? (
+          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {events.map((event, index) => (
               <li key={event.id}>
-                <EventCard event={event} />
+                <EventCard
+                  event={event}
+                  cover={photos.eventCovers.get(event.id)}
+                  emphasis={index === 0}
+                />
               </li>
             ))}
           </ul>
@@ -215,19 +289,14 @@ export default function HomePage() {
       </section>
 
       {years.data && years.data.length > 0 ? (
-        <section aria-labelledby="years-heading" className="space-y-3">
-          <h2
-            id="years-heading"
-            className="font-serif text-2xl font-semibold tracking-tight"
-          >
-            Browse by academic year
-          </h2>
+        <section aria-labelledby="years-heading" className="space-y-6">
+          <SectionHeading id="years-heading" index="03" title="Browse by year" />
           <ul className="flex flex-wrap gap-2">
             {years.data.map((year) => (
               <li key={year.id}>
                 <Link
                   to={`/archive?year=${year.id}`}
-                  className="inline-flex items-center rounded-full border border-archive-line bg-archive-surface px-4 py-1.5 text-sm font-medium text-archive-ink transition-colors hover:border-archive-accent hover:text-archive-accent"
+                  className="inline-flex items-center border border-archive-line px-5 py-2.5 font-serif text-base tracking-tight text-archive-ink transition-colors hover:border-archive-accent hover:text-archive-accent"
                 >
                   {year.label}
                 </Link>
@@ -237,28 +306,50 @@ export default function HomePage() {
         </section>
       ) : null}
 
-      <section aria-labelledby="values-heading" className="space-y-4">
-        <div className="space-y-1">
-          <Badge tone="accent">How the archive works</Badge>
-          <h2
-            id="values-heading"
-            className="font-serif text-2xl font-semibold tracking-tight"
-          >
-            Built on care, credit, and consent
-          </h2>
+      <section
+        aria-labelledby="contribute-heading"
+        className="grid overflow-hidden border border-archive-line lg:grid-cols-12"
+      >
+        <div className="lg:col-span-7">
+          {ctaPhoto ? (
+            <PhotoImage
+              photo={ctaPhoto}
+              width={1200}
+              height={800}
+              crop="fill"
+              className="h-full min-h-64 w-full object-cover lg:min-h-80"
+            />
+          ) : (
+            <div className="h-full min-h-64 w-full bg-archive-surface lg:min-h-80" />
+          )}
         </div>
-        <ul className="grid gap-4 sm:grid-cols-3">
-          {values.map((value) => (
-            <li key={value.title}>
-              <Card className="h-full space-y-2 p-5">
-                <h3 className="font-medium text-archive-ink">{value.title}</h3>
-                <p className="text-sm leading-relaxed text-archive-muted">
-                  {value.description}
-                </p>
-              </Card>
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-col justify-center gap-4 p-6 sm:p-10 lg:col-span-5">
+          <p className="eyebrow text-archive-accent">Add to the archive</p>
+          <h2
+            id="contribute-heading"
+            className="font-serif text-3xl font-normal leading-[1.05] tracking-[-0.03em] text-archive-ink sm:text-4xl"
+          >
+            Have photos from college?
+          </h2>
+          <p className="text-sm leading-relaxed text-archive-muted">
+            Share them with the archive. Every photo is reviewed and credited
+            before it appears.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-3">
+            <Link
+              to="/contribute"
+              className={buttonStyles({ variant: 'primary' })}
+            >
+              Add photos
+            </Link>
+            <Link
+              to="/about"
+              className={buttonStyles({ variant: 'secondary' })}
+            >
+              How it works
+            </Link>
+          </div>
+        </div>
       </section>
     </div>
   )

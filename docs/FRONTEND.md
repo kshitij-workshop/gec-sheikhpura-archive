@@ -20,6 +20,7 @@ frontend/src/
 │   ├── router.tsx           lazy route table and guard nesting
 │   └── guards/              RequireAuth, RequireRole, RequirePasswordReady
 ├── components/ui/           design-system primitives
+├── components/editorial/    public-archive masthead, section heading, account frame
 ├── components/domain/       shared domain presentation (status badge and labels)
 ├── features/
 │   ├── about/               public About page
@@ -66,8 +67,17 @@ Semantic tokens are declared in `styles/global.css` with Tailwind's `@theme` blo
 | `archive-line` | borders and dividers |
 | `archive-accent`, `archive-accent-soft` | links, eyebrows, selection |
 | `archive-success`, `archive-warning`, `archive-danger`, `archive-info` (+ `-soft`) | status tones |
+| `editorial-canvas`, `editorial-surface` | public dark canvas and raised surfaces |
+| `editorial-ink`, `editorial-muted`, `editorial-line` | public text and rules |
+| `editorial-gold` | the single public accent |
 
-Editorial tone: serif display headings, restrained uppercase eyebrows, generous whitespace, and a warm paper background rather than pure white.
+Two scope classes swap the same semantic tokens, so every primitive inherits the
+correct palette without per-component theme props:
+
+- `.editorial` (applied by `AppShell`) is the public dark system: canvas `#111111`, ink `#F5F2EA`, muted `#A5A5A5`, gold `#C9A66B`, and charcoal rules. Public pages, authentication, and the contribution flow render here.
+- `.workspace` (applied by `DashboardLayout` and `AdminLayout`) restores the light, high-legibility palette for member and administration surfaces. It is a light panel inset inside the editorial shell; workflows and chrome stay operational rather than cinematic.
+
+Typography uses Fraunces for display serif and Inter for UI, loaded from Google Fonts in `index.html` with `display=swap`; both have local Iowan/Palatino and system sans fallbacks so the layout survives a failed font request. Editorial devices are deliberate and finite: oversized serif headlines with tight tracking, wide-tracked uppercase micro-labels, hairline rules, sharp corners, numbered sections (`01`, `02`), and photography-first asymmetric grids. Motion is a short mount rise plus slow image scale on hover, disabled entirely under `prefers-reduced-motion`.
 
 Primitives exported from `components/ui/index.ts`:
 
@@ -78,6 +88,12 @@ Primitives exported from `components/ui/index.ts`:
 - `Card`, `PageHeader`, `EmptyState`, `Skeleton`, `Spinner`.
 - `Pagination` – accessible page window with `aria-current`.
 - `Dialog` – native modal element with a fallback for engines without `showModal`.
+
+Editorial composition helpers live in `components/editorial/`:
+
+- `EditorialHeader` – public page masthead with eyebrow, oversized title, description, actions, and optional metadata.
+- `SectionHeading` – numbered section rule and heading with an optional action.
+- `AccountFrame` – split account entry layout used by sign-in and registration.
 
 Component-only style helpers live in their own modules (`buttonStyles.ts`, `inputStyles.ts`, `paginationRange.ts`, `useFieldIds.ts`) so React Fast Refresh keeps working under `--max-warnings=0`.
 
@@ -133,6 +149,8 @@ Public reads live in `lib/api/archiveApi.ts` and are issued with `auth: false`, 
 - Attribution is always shown. Public photo payloads include ordered photographer credit names (never uploader identity), and every gallery image carries a visible credit line.
 - After a member successfully registers their first contribution, the API creates a public contributor profile from the account display name. The Contributors page then lists that profile; this does not infer that the member was the photographer.
 - The home page separates recently added photographs, recent events, and academic-year shortcuts. Missing content produces an honest empty state; an unreachable API produces a notice rather than fabricated cards.
+- The home page opens with a cinematic typographic hero and a single real archive photograph, then an asymmetric masonry gallery of approved photographs, an editorial event index, academic-year shortcuts, the archive principles, and a contribution call to action. Hero and leading gallery images load eagerly with explicit dimensions; everything else is lazy with Cloudinary `fill` crops sized for its slot, so the page does not shift as images arrive.
+- Album and home galleries use CSS columns for a print-like asymmetric rhythm. Each frame keeps its own caption, photographer credit, and report/manage actions; the layout collapses to two columns on phones and one column for album prints where legibility matters.
 
 The sign-in form validates credentials in the browser, posts to `/auth/login`, and continues to the guard-recorded destination. It only accepts same-origin paths as a redirect target, and it returns the same message for an unknown email and a wrong password.
 

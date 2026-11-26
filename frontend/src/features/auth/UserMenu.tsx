@@ -47,7 +47,7 @@ export function UserMenu() {
     return (
       <span
         aria-hidden="true"
-        className="h-8 w-24 animate-pulse rounded-full bg-stone-200"
+        className="h-8 w-24 animate-pulse rounded-sm bg-archive-line"
       />
     )
   }
@@ -56,7 +56,7 @@ export function UserMenu() {
     return (
       <Link
         to="/sign-in"
-        className={buttonStyles({ variant: 'secondary', size: 'sm' })}
+        className={`${buttonStyles({ variant: 'secondary', size: 'sm' })} whitespace-nowrap`}
       >
         Sign in
       </Link>
@@ -73,11 +73,11 @@ export function UserMenu() {
         aria-expanded={open}
         aria-controls="account-panel"
         aria-label={`Account menu for ${user.displayName}`}
-        className="flex items-center gap-2 rounded-full border border-archive-line bg-archive-surface py-1 pl-1 pr-3 text-sm font-medium text-archive-ink transition-colors hover:border-stone-300"
+        className="flex items-center gap-2 rounded-sm border border-archive-line bg-transparent py-1 pl-1 pr-3 text-sm font-medium text-archive-ink transition-colors hover:border-archive-accent"
       >
         <span
           aria-hidden="true"
-          className="flex h-7 w-7 items-center justify-center rounded-full bg-archive-ink text-xs font-semibold text-archive-paper"
+          className="flex h-7 w-7 items-center justify-center rounded-sm bg-archive-ink text-xs font-semibold text-archive-paper"
         >
           {initialsOf(user.displayName)}
         </span>
@@ -90,7 +90,7 @@ export function UserMenu() {
         <div
           id="account-panel"
           aria-label="Account"
-          className="absolute right-0 z-40 mt-2 w-64 space-y-2 rounded-xl border border-archive-line bg-archive-surface p-4 shadow-lg"
+          className="absolute right-0 z-40 mt-2 w-64 space-y-2 rounded-sm border border-archive-line bg-archive-surface p-4 shadow-2xl"
         >
           <div className="space-y-1">
             <p className="truncate text-sm font-semibold text-archive-ink">
@@ -106,7 +106,7 @@ export function UserMenu() {
               onClick={() => {
                 setOpen(false)
               }}
-              className="block rounded px-2 py-1.5 text-archive-muted hover:bg-stone-100 hover:text-archive-ink"
+              className="block rounded-sm px-2 py-1.5 text-archive-muted hover:bg-archive-accent-soft hover:text-archive-ink"
             >
               My dashboard
             </Link>
@@ -115,7 +115,7 @@ export function UserMenu() {
               onClick={() => {
                 setOpen(false)
               }}
-              className="block rounded px-2 py-1.5 text-archive-muted hover:bg-stone-100 hover:text-archive-ink"
+              className="block rounded-sm px-2 py-1.5 text-archive-muted hover:bg-archive-accent-soft hover:text-archive-ink"
             >
               My uploads
             </Link>
@@ -124,7 +124,7 @@ export function UserMenu() {
               onClick={() => {
                 setOpen(false)
               }}
-              className="block rounded px-2 py-1.5 text-archive-muted hover:bg-stone-100 hover:text-archive-ink"
+              className="block rounded-sm px-2 py-1.5 text-archive-muted hover:bg-archive-accent-soft hover:text-archive-ink"
             >
               Profile
             </Link>
@@ -134,7 +134,7 @@ export function UserMenu() {
                 onClick={() => {
                   setOpen(false)
                 }}
-                className="block rounded px-2 py-1.5 text-archive-muted hover:bg-stone-100 hover:text-archive-ink"
+                className="block rounded-sm px-2 py-1.5 text-archive-muted hover:bg-archive-accent-soft hover:text-archive-ink"
               >
                 Administration
               </Link>
@@ -151,7 +151,7 @@ export function UserMenu() {
                   }
                 })()
               }}
-              className="block w-full rounded px-2 py-1.5 text-left text-archive-danger hover:bg-red-50"
+              className="block w-full rounded-sm px-2 py-1.5 text-left text-archive-danger hover:bg-archive-danger-soft"
             >
               Sign out
             </button>

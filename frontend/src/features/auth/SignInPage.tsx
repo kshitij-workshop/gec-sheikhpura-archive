@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { z } from 'zod'
 
 import { Alert, Button, Card, PageHeader, TextField, buttonStyles } from '../../components/ui'
+import { AccountFrame } from '../../components/editorial/AccountFrame'
 import { googleClientId } from '../../lib/config'
 import { signInMessage } from './authMessages'
 import { GoogleSignInButton } from './GoogleSignInButton'
@@ -108,14 +109,12 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
-      <PageHeader
-        eyebrow="Account"
-        title="Sign in"
-        description="Access your submissions, event suggestions, and removal requests."
-      />
-
-      <Card className="space-y-4 p-6">
+    <AccountFrame
+      eyebrow="Account"
+      title="Sign in"
+      description="Access your submissions, event suggestions, and removal requests."
+    >
+      <Card className="space-y-5 p-6 sm:p-8">
         {status === 'loading' ? (
           <Alert tone="info" title="Checking your session">
             One moment while the archive restores your session.
@@ -214,6 +213,6 @@ export default function SignInPage() {
           New accounts must verify their email address before contributing.
         </p>
       </Card>
-    </div>
+    </AccountFrame>
   )
 }

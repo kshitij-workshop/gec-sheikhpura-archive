@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 
 import {
@@ -82,10 +82,15 @@ function localDateTimeToIso(value: string): string | null {
 
 export default function ContributePage() {
   const queryClient = useQueryClient()
+  const [searchParams] = useSearchParams()
   const events = useEvents({ size: 100 })
 
-  const [eventId, setEventId] = useState('')
-  const [albumId, setAlbumId] = useState('')
+  const [eventId, setEventId] = useState(
+    () => searchParams.get('event') ?? '',
+  )
+  const [albumId, setAlbumId] = useState(
+    () => searchParams.get('album') ?? '',
+  )
   const [note, setNote] = useState('')
   const [batchCredit, setBatchCredit] = useState('')
   const [queue, setQueue] = useState<QueueItem[]>([])
@@ -98,8 +103,21 @@ export default function ContributePage() {
 
   const counter = useRef(0)
 
-  const selectedEvent = events.data?.items.find((event) => event.id === eventId)
+  const eventsLoaded = events.data !== undefined
+  const eventOptions = events.data?.items ?? []
+  const resolvedEventId =
+    !eventsLoaded || eventOptions.some((event) => event.id === eventId)
+      ? eventId
+      : ''
+  const selectedEvent = eventOptions.find(
+    (event) => event.id === resolvedEventId,
+  )
   const albums = selectedEvent?.albums ?? []
+  const resolvedAlbumId =
+    !eventsLoaded || albums.some((album) => album.id === albumId)
+      ? albumId
+      : ''
+
   const pendingItems = queue.filter((item) => item.status === 'ready')
   const failedCount = queue.filter((item) => item.status === 'failed').length
   const doneCount = queue.filter((item) => item.status === 'done').length
@@ -227,7 +245,7 @@ export default function ContributePage() {
 
       updateItem(item.key, {
         status: 'done',
-        message: 'The photograph is private until a moderator approves it.',
+        message: 'This photo stays private until it is approved.',
       })
       void queryClient.invalidateQueries({ queryKey: ['me'] })
       return true
@@ -248,11 +266,11 @@ export default function ContributePage() {
     setFormError(null)
     setNotice(null)
 
-    if (submission === null && eventId.length === 0) {
+    if (submission === null && resolvedEventId.length === 0) {
       setFormError('Choose the event these photographs belong to.')
       return
     }
-    if (submission === null && albumId.length === 0) {
+    if (submission === null && resolvedAlbumId.length === 0) {
       const message =
         albums.length === 0
           ? 'This event has no published albums yet. Photographs can only be contributed to an album.'
@@ -277,8 +295,8 @@ export default function ContributePage() {
 
       if (submission === null) {
         const created = await createSubmission({
-          eventId,
-          albumId,
+          eventId: resolvedEventId,
+          albumId: resolvedAlbumId,
           note: note.trim() || null,
         })
         setSubmission(created)
@@ -296,8 +314,8 @@ export default function ContributePage() {
 
       setNotice(
         succeeded === pendingItems.length
-          ? `${String(succeeded)} ${succeeded === 1 ? 'photograph' : 'photographs'} registered for review.`
-          : `${String(succeeded)} of ${String(pendingItems.length)} photographs registered for review. Retry the failed items below.`,
+          ? `${String(succeeded)} ${succeeded === 1 ? 'photo' : 'photos'} sent for review.`
+          : `${String(succeeded)} of ${String(pendingItems.length)} photos sent for review. Retry the failed items below.`,
       )
     } catch (error) {
       setFormError(
@@ -345,13 +363,12 @@ export default function ContributePage() {
       <PageHeader
         eyebrow="Contribute"
         title="Share photographs"
-        description="Submit photographs for review. Images upload directly to the archive's image host; the API never receives the bytes."
+        description="Add photos to an event album. They stay private until reviewed."
       />
 
-      <Alert tone="info" title="Attribution comes first">
-        Record the photographer for every image. The uploader and the
-        photographer are separate people in the archive, and the uploader is
-        never assumed to have taken the photograph.
+      <Alert tone="info" title="Who took the photo?">
+        Add the photographer's name for each image. Uploading and taking the
+        photo are different roles.
       </Alert>
 
       {notice ? (
@@ -416,12 +433,10 @@ export default function ContributePage() {
         <Card className="space-y-4 p-6">
           <div className="space-y-1">
             <h2 className="font-serif text-xl font-semibold tracking-tight">
-              1. Where do these photographs belong?
+              1. Choose an event and album
             </h2>
             <p className="text-sm text-archive-muted">
-              Only published events are listed. Choose the album the
-              photographs belong to; every contribution is filed under an
-              album.
+              Pick where these photos belong.
             </p>
           </div>
 
@@ -450,14 +465,14 @@ export default function ContributePage() {
               <SelectField
                 id="contribute-event"
                 label="Event"
-                value={eventId}
+                value={resolvedEventId}
                 disabled={submission !== null || starting}
                 onChange={(event) => {
                   setEventId(event.target.value)
                   setAlbumId('')
                   setAlbumError(null)
                 }}
-                hint="Only published events appear here."
+                hint="Only published events are listed."
               >
                 <option value="">Choose an event</option>
                 {(events.data?.items ?? []).map((option) => (
@@ -471,10 +486,10 @@ export default function ContributePage() {
                 <SelectField
                   id="contribute-album"
                   label="Album"
-                  value={albumId}
+                  value={resolvedAlbumId}
                   disabled={submission !== null || starting}
                   error={albumError ?? undefined}
-                  hint="Required. Photographs are published with the album they belong to."
+                  hint="Photos are published with the album they belong to."
                   onChange={(event) => {
                     setAlbumId(event.target.value)
                     setAlbumError(null)
@@ -498,7 +513,7 @@ export default function ContributePage() {
                 id="contribute-note"
                 label="Note for reviewers"
                 optional
-                hint="Context such as the occasion, location, or class batch."
+                hint="Anything the reviewer should know — the occasion, place, or batch."
                 value={note}
                 maxLength={2000}
                 disabled={submission !== null || starting}
@@ -513,12 +528,11 @@ export default function ContributePage() {
         <Card className="space-y-4 p-6">
           <div className="space-y-1">
             <h2 className="font-serif text-xl font-semibold tracking-tight">
-              2. Add photographs
+              2. Add your photos
             </h2>
             <p className="text-sm text-archive-muted">
               JPEG, PNG, or WebP up to {formatBytes(DEFAULT_MAX_FILE_SIZE_BYTES)}{' '}
-              each, with at most {MAX_PHOTOS_PER_SUBMISSION} photographs per
-              submission. Files are checked again by the server.
+              each, with at most {MAX_PHOTOS_PER_SUBMISSION} photos at a time.
             </p>
           </div>
 
@@ -538,7 +552,7 @@ export default function ContributePage() {
               disabled={starting}
               onChange={handleFiles}
               aria-describedby="contribute-files-hint"
-              className="block w-full rounded-md border border-archive-line bg-archive-surface px-3 py-2 text-sm text-archive-ink file:mr-3 file:rounded file:border-0 file:bg-stone-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-archive-ink"
+              className="block w-full rounded-md border border-archive-line bg-archive-surface px-3 py-2 text-sm text-archive-ink file:mr-3 file:rounded-sm file:border-0 file:bg-archive-line file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-archive-ink"
             />
             <p id="contribute-files-hint" className="text-xs text-archive-muted">
               {queue.length} of {MAX_PHOTOS_PER_SUBMISSION} files selected.
@@ -546,7 +560,7 @@ export default function ContributePage() {
           </div>
 
           {queue.length > 0 ? (
-            <div className="space-y-2 rounded-lg border border-archive-line bg-stone-50 p-4">
+            <div className="space-y-3 rounded-sm border border-archive-line bg-archive-surface p-4">
               <TextField
                 id="contribute-batch-credit"
                 label="Apply one photographer credit to files with no credit"
@@ -571,7 +585,7 @@ export default function ContributePage() {
           ) : null}
 
           {queue.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-archive-line px-4 py-8 text-center text-sm text-archive-muted">
+            <p className="rounded-sm border border-dashed border-archive-line px-4 py-10 text-center text-sm text-archive-muted">
               No photographs selected yet. Add files to describe and upload
               them.
             </p>
@@ -579,7 +593,7 @@ export default function ContributePage() {
             <ol className="space-y-3">
               {queue.map((item) => (
                 <li key={item.key}>
-                  <div className="space-y-3 rounded-lg border border-archive-line p-4">
+                  <div className="space-y-3 rounded-sm border border-archive-line p-4">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0 space-y-1">
                         <p className="truncate font-medium text-archive-ink">
@@ -695,7 +709,7 @@ export default function ContributePage() {
             disabled={
               starting ||
               pendingItems.length === 0 ||
-              (submission === null && eventId.length === 0)
+              (submission === null && resolvedEventId.length === 0)
             }
           >
             {submission === null
@@ -717,12 +731,12 @@ export default function ContributePage() {
 
         <p className="text-sm text-archive-muted">
           {doneCount > 0
-            ? `${String(doneCount)} registered. `
+            ? `${String(doneCount)} sent. `
             : ''}
           {failedCount > 0
             ? `${String(failedCount)} failed and can be retried individually. `
             : ''}
-          Nothing becomes public until a moderator approves it.
+          Nothing becomes public until it is approved.
         </p>
       </form>
     </div>

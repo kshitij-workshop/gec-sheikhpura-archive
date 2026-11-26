@@ -1,108 +1,146 @@
 import { Link } from 'react-router'
 
-import { Card, PageHeader, buttonStyles } from '../../components/ui'
+import { buttonStyles } from '../../components/ui'
+import { EditorialHeader } from '../../components/editorial/EditorialHeader'
+import { SectionHeading } from '../../components/editorial/SectionHeading'
+import { PhotoImage } from '../archive/components/PhotoImage'
+import { usePhotoIndex } from '../archive/queries'
 
 const principles = [
   {
     title: 'One trusted record',
     description:
-      'Photographs from college events are preserved in one moderated archive instead of scattering across personal devices, messaging groups, and social feeds.',
+      'College photographs kept in one reviewed archive instead of scattered across phones and feeds.',
   },
   {
     title: 'Community contributions',
     description:
-      'Verified members of the college community upload photographs, suggest events, and track their submissions through review.',
+      'Members upload photographs, suggest events, and follow their submissions through review.',
   },
   {
-    title: 'Attribution before publication',
+    title: 'Credit before publication',
     description:
-      'The person who uploads a photograph is not assumed to be its photographer. Credits are recorded explicitly and displayed with each published image.',
+      'Uploading and photographing are different roles. Every published image carries a named credit.',
   },
 ] as const
 
 const policies = [
   {
-    title: 'Moderation',
+    title: 'Review',
     description:
-      'Every submission is reviewed by an administrator before publication. Rejected, hidden, and removed photographs never appear in public listings or public image URLs.',
+      'Every submission is checked before it appears. Rejected and removed photos stay private.',
   },
   {
     title: 'Privacy',
     description:
-      'The archive does not use facial recognition or automatically identify students. Public responses omit account and contact details.',
+      'No facial recognition and no automatic identification. Public pages never show account details.',
   },
   {
     title: 'Corrections and removal',
     description:
-      'Anyone can report a published photograph. Uploaders may request removal of their own submissions, and administrators review both reports and removal requests.',
+      'Anyone can report a photo. Uploaders can request removal, and administrators review each case.',
   },
 ] as const
 
 export default function AboutPage() {
+  const photos = usePhotoIndex(6)
+  const strip = photos.photos.slice(0, 3)
+
   return (
-    <div className="space-y-10">
-      <PageHeader
+    <div className="space-y-16 pb-4 sm:space-y-20">
+      <EditorialHeader
         eyebrow="About"
         title="Preserving college memory, carefully"
-        description="The GEC Sheikhpura Archive is a community-driven photographic record of Government Engineering College, Sheikhpura, built for future generations."
+        description="A community photo archive of Government Engineering College, Sheikhpura."
         actions={
           <Link to="/archive" className={buttonStyles({ variant: 'primary' })}>
-            Explore the archive
+            Browse photos
           </Link>
         }
       />
 
-      <section aria-labelledby="mission-heading" className="space-y-4">
-        <h2
-          id="mission-heading"
-          className="font-serif text-2xl font-semibold tracking-tight"
-        >
-          Why this archive exists
-        </h2>
-        <p className="max-w-3xl text-base leading-relaxed text-archive-muted">
-          College life passes quickly. Photographs that document it are often
-          held by individuals, shared briefly, and then lost. This archive gives
-          the institution a durable, searchable, and respectful home for those
-          images, so that the events, people, and places that shaped the college
-          remain available to the students and historians who come next.
-        </p>
+      {strip.length > 0 ? (
+        <ul className="grid grid-cols-3 gap-2 sm:gap-3">
+          {strip.map((photo, index) => (
+            <li
+              key={photo.id}
+              className="overflow-hidden border border-archive-line bg-archive-surface"
+            >
+              <PhotoImage
+                photo={photo}
+                width={600}
+                height={750}
+                crop="fill"
+                eager={index === 0}
+                className="aspect-[3/4] w-full object-cover"
+              />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <section aria-labelledby="mission-heading" className="grid gap-10 lg:grid-cols-12">
+        <div className="lg:col-span-4">
+          <SectionHeading id="mission-heading" index="01" title="Why this archive exists" />
+        </div>
+        <div className="space-y-5 lg:col-span-8">
+          <p className="font-serif text-2xl font-normal leading-[1.35] tracking-[-0.015em] text-archive-ink sm:text-3xl">
+            College life passes quickly. This archive gives it a durable,
+            searchable, and respectful home.
+          </p>
+          <p className="max-w-3xl text-base leading-relaxed text-archive-muted">
+            Photos from college life are often shared once and lost. Here they
+            stay safe, easy to find, and properly credited.
+          </p>
+        </div>
       </section>
 
-      <section aria-labelledby="principles-heading" className="space-y-4">
-        <h2
-          id="principles-heading"
-          className="font-serif text-2xl font-semibold tracking-tight"
-        >
-          Principles
-        </h2>
-        <ul className="grid gap-4 sm:grid-cols-3">
-          {principles.map((principle) => (
-            <li key={principle.title}>
-              <Card className="h-full space-y-2 p-5">
-                <h3 className="font-medium text-archive-ink">
-                  {principle.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-archive-muted">
-                  {principle.description}
-                </p>
-              </Card>
+      <section aria-labelledby="principles-heading" className="space-y-8">
+        <SectionHeading id="principles-heading" index="02" title="Principles" />
+        <ul className="grid gap-px overflow-hidden border border-archive-line bg-archive-line sm:grid-cols-3">
+          {principles.map((principle, index) => (
+            <li key={principle.title} className="bg-archive-paper p-6 sm:p-8">
+              <p
+                aria-hidden="true"
+                className="font-serif text-xs tracking-[0.18em] text-archive-accent"
+              >
+                0{index + 1}
+              </p>
+              <h3 className="mt-6 font-serif text-xl leading-snug tracking-tight text-archive-ink">
+                {principle.title}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-archive-muted">
+                {principle.description}
+              </p>
             </li>
           ))}
         </ul>
       </section>
 
-      <section aria-labelledby="policies-heading" className="space-y-4">
-        <h2
+      <section aria-labelledby="policies-heading" className="space-y-8">
+        <SectionHeading
           id="policies-heading"
-          className="font-serif text-2xl font-semibold tracking-tight"
-        >
-          Publication and privacy
-        </h2>
-        <dl className="divide-y divide-archive-line rounded-xl border border-archive-line bg-archive-surface">
-          {policies.map((policy) => (
-            <div key={policy.title} className="space-y-1 p-5">
-              <dt className="font-medium text-archive-ink">{policy.title}</dt>
-              <dd className="max-w-3xl text-sm leading-relaxed text-archive-muted">
+          index="03"
+          title="Publication and privacy"
+        />
+        <dl className="divide-y divide-archive-line border-y border-archive-line">
+          {policies.map((policy, index) => (
+            <div
+              key={policy.title}
+              className="grid gap-3 py-6 sm:grid-cols-12 sm:gap-6"
+            >
+              <dt className="flex items-baseline gap-3 sm:col-span-4">
+                <span
+                  aria-hidden="true"
+                  className="font-serif text-xs tracking-[0.18em] text-archive-accent"
+                >
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <span className="font-serif text-xl tracking-tight text-archive-ink">
+                  {policy.title}
+                </span>
+              </dt>
+              <dd className="max-w-3xl text-sm leading-relaxed text-archive-muted sm:col-span-8">
                 {policy.description}
               </dd>
             </div>
@@ -112,29 +150,33 @@ export default function AboutPage() {
 
       <section
         aria-labelledby="contribute-heading"
-        className="space-y-3 rounded-xl border border-archive-line bg-archive-accent-soft p-6"
+        className="border border-archive-line px-6 py-12 sm:px-10 sm:py-14"
       >
-        <h2
-          id="contribute-heading"
-          className="font-serif text-2xl font-semibold tracking-tight"
-        >
-          Contribute to the archive
-        </h2>
-        <p className="max-w-2xl text-sm leading-relaxed text-archive-muted">
-          If you have photographs from a college event, sign in to submit them
-          with accurate photographer credits. Every contribution is reviewed
-          before it becomes part of the public record.
-        </p>
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Link to="/contribute" className={buttonStyles({ variant: 'primary' })}>
-            Share photographs
-          </Link>
-          <Link
-            to="/contributors"
-            className={buttonStyles({ variant: 'secondary' })}
-          >
-            Meet the contributors
-          </Link>
+        <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
+          <div className="lg:col-span-8">
+            <p className="eyebrow text-archive-accent">Take part</p>
+            <h2
+              id="contribute-heading"
+              className="mt-5 max-w-3xl font-serif text-4xl font-normal leading-[1.02] tracking-[-0.03em] text-archive-ink sm:text-5xl"
+            >
+              Contribute to the archive
+            </h2>
+            <p className="mt-5 max-w-2xl text-sm leading-relaxed text-archive-muted sm:text-base">
+              Have photos from a college event? Add them with the
+              photographer's name. Every photo is reviewed before it appears.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3 lg:col-span-4 lg:justify-end">
+            <Link to="/contribute" className={buttonStyles({ variant: 'primary' })}>
+              Add photos
+            </Link>
+            <Link
+              to="/contributors"
+              className={buttonStyles({ variant: 'secondary' })}
+            >
+              Meet the contributors
+            </Link>
+          </div>
         </div>
       </section>
     </div>

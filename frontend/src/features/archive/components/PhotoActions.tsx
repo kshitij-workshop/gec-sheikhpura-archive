@@ -139,9 +139,14 @@ export function PhotoActions({
           to="/sign-in"
           state={{ from: `${location.pathname}${location.search}` }}
           aria-label={`Sign in to report ${photoLabel(photo)}`}
-          className="text-xs font-medium text-archive-accent underline-offset-4 hover:underline"
+          className={[
+            'transition-colors',
+            compact
+              ? 'text-[10px] uppercase tracking-[0.14em] text-archive-muted hover:text-archive-accent'
+              : 'text-xs font-medium text-archive-accent underline-offset-4 hover:underline',
+          ].join(' ')}
         >
-          {compact ? 'Sign in to report' : 'Sign in to report this photograph'}
+          {compact ? 'Report' : 'Sign in to report this photograph'}
         </Link>
       </p>
     )

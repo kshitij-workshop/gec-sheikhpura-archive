@@ -1,14 +1,17 @@
+import { useMemo } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
 import {
   fetchAcademicYears,
   fetchAlbumBySlug,
+  fetchAlbumPreview,
   fetchCategories,
   fetchEventBySlug,
   fetchEvents,
   fetchRecentPhotos,
 } from '../../lib/api/archiveApi'
 import type { EventQuery } from '../../lib/api/archiveApi'
+import type { RecentPhoto } from '../../lib/api/types'
 import { retryUnlessNotFound } from '../../lib/api/retry'
 import { useAuth } from '../auth/useAuth'
 
@@ -27,6 +30,8 @@ export const archiveKeys = {
   event: (slug: string) => ['archive', 'event', slug] as const,
   album: (slug: string, page: number, viewer: string) =>
     ['archive', 'album', slug, page, viewer] as const,
+  albumPreview: (slug: string, viewer: string) =>
+    ['archive', 'album-preview', slug, viewer] as const,
   recentPhotos: (size: number, viewer: string) =>
     ['archive', 'recent-photos', size, viewer] as const,
   academicYears: ['archive', 'academic-years'] as const,
@@ -80,6 +85,45 @@ export function useRecentPhotos(size = 6) {
     staleTime: 60_000,
     retry: retryUnlessNotFound,
   })
+}
+
+export function useAlbumPreview(slug: string | undefined) {
+  const { user } = useAuth()
+
+  return useQuery({
+    queryKey: archiveKeys.albumPreview(slug ?? '', viewerKey(user?.id)),
+    queryFn: () => fetchAlbumPreview(slug!),
+    enabled: Boolean(slug),
+    staleTime: 5 * 60_000,
+    retry: retryUnlessNotFound,
+  })
+}
+
+/**
+ * A lightweight photo index for covers and photo-led layouts. One public read
+ * of recent photographs is mapped by event and album so listings can show real
+ * imagery without a request per card.
+ */
+export function usePhotoIndex(size = 60) {
+  const recent = useRecentPhotos(size)
+
+  const { eventCovers, albumCovers } = useMemo(() => {
+    const byEvent = new Map<string, RecentPhoto>()
+    const byAlbum = new Map<string, RecentPhoto>()
+
+    for (const photo of recent.data?.items ?? []) {
+      if (!byEvent.has(photo.eventId)) {
+        byEvent.set(photo.eventId, photo)
+      }
+      if (!byAlbum.has(photo.albumId)) {
+        byAlbum.set(photo.albumId, photo)
+      }
+    }
+
+    return { eventCovers: byEvent, albumCovers: byAlbum }
+  }, [recent.data])
+
+  return { ...recent, photos: recent.data?.items ?? [], eventCovers, albumCovers }
 }
 
 export function useCategories() {
